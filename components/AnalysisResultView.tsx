@@ -115,6 +115,7 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
       side: result.recommendation,
       entryPrice,
       sizeUsd,
+      source: "analyzer",
     });
     setConfirmed(true);
     setOpen(false);

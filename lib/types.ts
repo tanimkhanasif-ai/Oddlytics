@@ -47,6 +47,8 @@ export interface PaperPosition {
   status: "open" | "closed";
   closedAt?: string;
   exitPrice?: number;
+  source?: "manual" | "analyzer" | "copy-trading";
+  sourceTraderAddress?: string;
 }
 
 export interface PaperTradingState {
@@ -64,4 +66,36 @@ export interface HandpickedBet {
 export interface AppConfig {
   aiEnabled: boolean;
   stripeEnabled: boolean;
+}
+
+export interface TopTrader {
+  rank: number;
+  walletAddress: string;
+  name: string | null;
+  pnl: number;
+  volume: number;
+}
+
+export interface TraderTrade {
+  market: string;
+  question: string | null;
+  outcome: string | null;
+  side: "BUY" | "SELL" | null;
+  size: number;
+  price: number;
+  timestampMs: number;
+}
+
+export interface TrackedWallet {
+  walletAddress: string;
+  name: string | null;
+  trackedAt: string;
+}
+
+export interface CopyTradingFollow {
+  walletAddress: string;
+  name: string | null;
+  allocationUsd: number;
+  followedAt: string;
+  lastSeenTradeTimestampMs: number;
 }

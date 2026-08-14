@@ -149,6 +149,7 @@ function PositionRow({
           {position.platform} · {position.side} @ {(position.entryPrice * 100).toFixed(0)}¢ ·{" "}
           {formatUsd(position.sizeUsd)}
           {!isOpen && " · closed"}
+          {position.source === "copy-trading" && " · via Copy Trading"}
         </p>
       </div>
       <div className="flex items-center gap-4">

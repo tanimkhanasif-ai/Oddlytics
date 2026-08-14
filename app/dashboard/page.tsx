@@ -39,6 +39,39 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FeatureCard
+          href="/analyzer"
+          title="AI Analyzer"
+          body="Upload a screenshot or paste a market link and get a structured pick."
+        />
+        <FeatureCard
+          href="/paper-trading"
+          title="Paper Trading"
+          body="Trade with virtual money and test strategies without any risk."
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <FeatureCard
+          href="/handpicked-bets"
+          title="Handpicked Bets"
+          body="Curated picks, refreshed regularly."
+          compact
+        />
+        <FeatureCard
+          href="/wallet-tracker"
+          title="Wallet Tracker"
+          body="Real top Polymarket traders, live."
+          compact
+        />
+        <FeatureCard
+          href="/copy-trading"
+          title="Copy Trading"
+          body="Mirror real traders into Paper Trading."
+          compact
+        />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Virtual cash" value={formatUsd(cashUsd)} href="/paper-trading" />
         <StatCard label="Open positions" value={String(openPositions.length)} href="/paper-trading" />
@@ -54,32 +87,6 @@ export default function DashboardPage() {
           tone={subscribed ? "yes" : undefined}
           href="/handpicked-bets"
         />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Link
-          href="/analyzer"
-          className="rounded-xl border border-white/10 bg-white/5 p-5 hover:border-white/20 hover:bg-white/10"
-        >
-          <h3 className="font-medium text-white">Run a new analysis</h3>
-          <p className="mt-1 text-sm text-gray-400">
-            Pull a live Polymarket/Kalshi market or paste a screenshot.
-          </p>
-        </Link>
-        <Link
-          href="/paper-trading"
-          className="rounded-xl border border-white/10 bg-white/5 p-5 hover:border-white/20 hover:bg-white/10"
-        >
-          <h3 className="font-medium text-white">Review Paper Trading</h3>
-          <p className="mt-1 text-sm text-gray-400">Check open positions and simulated P&L.</p>
-        </Link>
-        <Link
-          href="/coach"
-          className="rounded-xl border border-white/10 bg-white/5 p-5 hover:border-white/20 hover:bg-white/10"
-        >
-          <h3 className="font-medium text-white">Ask the AI Coach</h3>
-          <p className="mt-1 text-sm text-gray-400">Get a plain-language explainer on any concept.</p>
-        </Link>
       </div>
 
       <div>
@@ -112,6 +119,32 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function FeatureCard({
+  href,
+  title,
+  body,
+  compact,
+}: {
+  href: string;
+  title: string;
+  body: string;
+  compact?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-xl border border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 ${
+        compact ? "p-4" : "p-6"
+      }`}
+    >
+      <h3 className={compact ? "text-base font-semibold text-white" : "text-xl font-semibold text-white"}>
+        {title}
+      </h3>
+      <p className="mt-1 text-sm text-gray-400">{body}</p>
+    </Link>
   );
 }
 

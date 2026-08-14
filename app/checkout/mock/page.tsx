@@ -17,45 +17,87 @@ function MockCheckoutInner() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <p className="mb-4 rounded-md bg-yellow-500/10 px-3 py-2 text-xs font-medium text-yellow-400">
-          TEST MODE — this is a mocked checkout page. No real payment is processed, and no Stripe
-          keys are configured yet.
-        </p>
-        <h1 className="text-lg font-semibold text-white">Oddlytics Handpicked Bets</h1>
-        <p className="mt-1 text-sm text-gray-400">Monthly access to curated, premium picks.</p>
-        <p className="mt-4 text-2xl font-semibold text-white">
-          $19.00 <span className="text-sm font-normal text-gray-500">/ month</span>
-        </p>
-
-        <div className="mt-5 space-y-2">
-          <div className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-500">
-            Card number — •••• •••• •••• 4242 (test)
+    <div className="min-h-screen bg-white text-gray-900">
+      <div className="mx-auto grid max-w-4xl gap-10 px-6 py-16 sm:grid-cols-2">
+        <div>
+          <p className="rounded-md bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700">
+            TEST MODE — this is a mocked checkout page. No real payment is processed, and no
+            payment provider is connected yet.
+          </p>
+          <div className="mt-8 flex items-center gap-2">
+            <span className="grid h-6 w-6 place-items-center rounded bg-gray-900 text-xs font-bold text-white">
+              O
+            </span>
+            <span className="text-sm text-gray-500">Oddlytics.app</span>
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-500">
-              12 / 34
+          <p className="mt-4 text-sm text-gray-500">Unlock Instant Access</p>
+          <p className="mt-6 text-sm text-gray-500">Subscribe to All-Access</p>
+          <p className="text-3xl font-semibold text-gray-900">$1</p>
+
+          <div className="mt-8 space-y-2 border-t border-gray-200 pt-4 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Total due today</span>
+              <span className="font-medium text-gray-900">$1</span>
             </div>
-            <div className="flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-500">
-              CVC
+            <div className="flex justify-between">
+              <span className="text-gray-500">Total after 7 days</span>
+              <span className="text-gray-700">$19 per month</span>
             </div>
           </div>
         </div>
 
-        <button
-          onClick={pay}
-          disabled={loading}
-          className="mt-5 w-full rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black disabled:opacity-50"
-        >
-          {loading ? "Processing…" : "Pay $19.00 (test mode)"}
-        </button>
-        <button
-          onClick={() => router.push("/handpicked-bets?checkout=cancelled")}
-          className="mt-2 w-full rounded-lg px-4 py-2 text-sm text-gray-400 hover:text-white"
-        >
-          Cancel
-        </button>
+        <div>
+          <button
+            disabled
+            className="w-full cursor-not-allowed rounded-lg bg-gray-900 py-3 text-sm font-medium text-white opacity-60"
+          >
+            Google Pay (disabled in test mode)
+          </button>
+          <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
+            <div className="h-px flex-1 bg-gray-200" />
+            OR PAY ANOTHER WAY
+            <div className="h-px flex-1 bg-gray-200" />
+          </div>
+
+          <label className="text-xs font-medium text-gray-600">Email</label>
+          <div className="mt-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+            you@example.com
+          </div>
+
+          <label className="mt-4 block text-xs font-medium text-gray-600">Card information</label>
+          <div className="mt-1 space-y-px">
+            <div className="rounded-t-lg border border-gray-200 px-3 py-2 text-sm text-gray-400">
+              1234 1234 1234 1234
+            </div>
+            <div className="flex">
+              <div className="flex-1 rounded-bl-lg border border-t-0 border-gray-200 px-3 py-2 text-sm text-gray-400">
+                MM / YY
+              </div>
+              <div className="flex-1 rounded-br-lg border border-t-0 border-l-0 border-gray-200 px-3 py-2 text-sm text-gray-400">
+                CVC
+              </div>
+            </div>
+          </div>
+
+          <label className="mt-4 block text-xs font-medium text-gray-600">Name on card</label>
+          <div className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-400">
+            Full name
+          </div>
+
+          <button
+            onClick={pay}
+            disabled={loading}
+            className="mt-6 w-full rounded-lg bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? "Processing…" : "Pay $1.00 (test mode)"}
+          </button>
+          <button
+            onClick={() => router.push("/handpicked-bets?checkout=cancelled")}
+            className="mt-2 w-full py-2 text-xs text-gray-400 hover:text-gray-700"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );
