@@ -16,6 +16,14 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
     return <main className="min-h-screen">{children}</main>;
   }
 
+  if (pathname.startsWith("/login") || pathname.startsWith("/signup")) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6 py-16">
+        {children}
+      </main>
+    );
+  }
+
   if (MARKETING_PATHS.includes(pathname)) {
     return (
       <>

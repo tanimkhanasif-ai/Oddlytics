@@ -1,66 +1,95 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { readLocalStorage, writeLocalStorage } from "@/lib/storage";
-import type { PaperPosition, PaperTradingState } from "@/lib/types";
+import { useSession } from "next-auth/react";
+import type { PaperPosition } from "@/lib/types";
 
-const STORAGE_KEY = "oddlytics_paper_trading_v1";
-const STARTING_CASH = 1000;
+interface ApiPosition {
+  id: string;
+  marketQuestion: string;
+  platform: string;
+  side: "YES" | "NO";
+  entryPrice: number;
+  sizeUsd: number;
+  openedAt: string;
+  status: "open" | "closed";
+  closedAt: string | null;
+  exitPrice: number | null;
+  source: string | null;
+  sourceTraderAddress: string | null;
+}
 
-function initialState(): PaperTradingState {
-  return { cashUsd: STARTING_CASH, positions: [] };
+function mapPosition(r: ApiPosition): PaperPosition {
+  return {
+    id: r.id,
+    marketQuestion: r.marketQuestion,
+    platform: r.platform as PaperPosition["platform"],
+    side: r.side,
+    entryPrice: r.entryPrice,
+    sizeUsd: r.sizeUsd,
+    openedAt: r.openedAt,
+    status: r.status,
+    closedAt: r.closedAt ?? undefined,
+    exitPrice: r.exitPrice ?? undefined,
+    source: (r.source as PaperPosition["source"]) ?? undefined,
+    sourceTraderAddress: r.sourceTraderAddress ?? undefined,
+  };
 }
 
 export function usePaperTrading() {
-  const [state, setState] = useState<PaperTradingState>(initialState());
+  const { status } = useSession();
+  const [cashUsd, setCashUsd] = useState(0);
+  const [positions, setPositions] = useState<PaperPosition[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    setState(readLocalStorage(STORAGE_KEY, initialState()));
+  const refresh = useCallback(async () => {
+    const res = await fetch("/api/paper-trading");
+    if (res.ok) {
+      const data = await res.json();
+      setCashUsd(data.cashUsd ?? 0);
+      setPositions((data.positions ?? []).map(mapPosition));
+    }
     setHydrated(true);
   }, []);
 
+  useEffect(() => {
+    if (status === "authenticated") refresh();
+    else if (status === "unauthenticated") setHydrated(true);
+  }, [status, refresh]);
+
   const openPosition = useCallback(
-    (p: Omit<PaperPosition, "id" | "openedAt" | "status">) => {
-      setState((prev) => {
-        if (p.sizeUsd <= 0 || p.sizeUsd > prev.cashUsd) return prev;
-        const position: PaperPosition = {
-          ...p,
-          id: `pp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          openedAt: new Date().toISOString(),
-          status: "open",
-        };
-        const next: PaperTradingState = {
-          cashUsd: prev.cashUsd - p.sizeUsd,
-          positions: [position, ...prev.positions],
-        };
-        writeLocalStorage(STORAGE_KEY, next);
-        return next;
+    async (p: Omit<PaperPosition, "id" | "openedAt" | "status">): Promise<boolean> => {
+      const res = await fetch("/api/paper-trading", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "open", ...p }),
       });
+      if (res.ok) await refresh();
+      return res.ok;
     },
-    []
+    [refresh]
   );
 
-  const closePosition = useCallback((id: string, exitPrice: number) => {
-    setState((prev) => {
-      let payout = 0;
-      const positions = prev.positions.map((pos) => {
-        if (pos.id !== id || pos.status !== "open") return pos;
-        const shares = pos.sizeUsd / pos.entryPrice;
-        payout = shares * exitPrice;
-        return { ...pos, status: "closed" as const, closedAt: new Date().toISOString(), exitPrice };
+  const closePosition = useCallback(
+    async (id: string, exitPrice: number) => {
+      const res = await fetch("/api/paper-trading", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "close", id, exitPrice }),
       });
-      const next: PaperTradingState = { cashUsd: prev.cashUsd + payout, positions };
-      writeLocalStorage(STORAGE_KEY, next);
-      return next;
+      if (res.ok) await refresh();
+    },
+    [refresh]
+  );
+
+  const reset = useCallback(async () => {
+    await fetch("/api/paper-trading", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reset" }),
     });
-  }, []);
+    await refresh();
+  }, [refresh]);
 
-  const reset = useCallback(() => {
-    const next = initialState();
-    writeLocalStorage(STORAGE_KEY, next);
-    setState(next);
-  }, []);
-
-  return { ...state, hydrated, openPosition, closePosition, reset };
+  return { cashUsd, positions, hydrated, openPosition, closePosition, reset };
 }

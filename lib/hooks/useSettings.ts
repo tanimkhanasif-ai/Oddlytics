@@ -1,22 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { readLocalStorage, writeLocalStorage } from "@/lib/storage";
-
-const STORAGE_KEY = "oddlytics_username_v1";
+import { useSession } from "next-auth/react";
 
 export function useUsername() {
+  const { status } = useSession();
   const [username, setUsernameState] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setUsernameState(readLocalStorage(STORAGE_KEY, ""));
-    setHydrated(true);
-  }, []);
+    if (status === "authenticated") {
+      fetch("/api/account")
+        .then((r) => r.json())
+        .then((data) => setUsernameState(data.name ?? ""))
+        .finally(() => setHydrated(true));
+    } else if (status === "unauthenticated") {
+      setHydrated(true);
+    }
+  }, [status]);
 
-  const setUsername = useCallback((value: string) => {
+  const setUsername = useCallback(async (value: string) => {
     setUsernameState(value);
-    writeLocalStorage(STORAGE_KEY, value);
+    await fetch("/api/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: value }),
+    });
   }, []);
 
   return { username, hydrated, setUsername };

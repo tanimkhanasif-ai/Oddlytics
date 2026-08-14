@@ -9,7 +9,7 @@ Oddlytics helps you understand prediction-market questions on Polymarket and Kal
 - **AI Coach** — a chat panel that explains prediction-market and trading concepts in plain
   language, aware of whatever analysis is currently on screen.
 - **Paper Trading** — practice acting on a pick with virtual money only. Positions and balance are
-  stored locally in your browser.
+  real database rows, scoped to your account.
 - **Handpicked Bets** — a curated, premium feed of picks behind a subscription paywall.
 - **Wallet Tracker** — a real, live leaderboard of top Polymarket traders (public Data API), with
   each wallet's real recent trade history.
@@ -17,8 +17,10 @@ Oddlytics helps you understand prediction-market questions on Polymarket and Kal
   auto-mirror into your virtual Paper Trading balance (never real money).
 - **Dashboard** — an overview of your paper-trading portfolio, subscription status, and recent
   analyses.
+- **Accounts** — email/password sign-up and login (NextAuth/Auth.js), backed by Postgres (Prisma).
+  Every app page except the landing page and Pricing requires being logged in.
 - **Pricing** / **Settings** — a pricing page driving the (mocked) checkout flow, and a settings
-  page for the (localStorage-only) account state.
+  page for your account (display name, subscription status, reset account data, log out).
 
 AI Analyzer / AI Coach and the paywall run on **mocked data** until you connect real keys (see
 below). Wallet Tracker and Copy Trading are different: they call Polymarket's real, public,
@@ -29,11 +31,38 @@ has no public trader-level API, so those two features are Polymarket-only.
 
 ```bash
 npm install
-cp .env.example .env.local   # keys are optional — see "Demo mode" below
+cp .env.example .env.local
+cp .env.example .env   # Prisma's CLI reads .env specifically, not .env.local — see below
+```
+
+Then, in **both** `.env.local` and `.env`, set:
+
+```
+NEXTAUTH_SECRET=...        # generate with: openssl rand -base64 32
+DATABASE_URL=...           # a Postgres connection string, e.g. from Neon (see below)
+```
+
+`ANTHROPIC_API_KEY` and the `STRIPE_*` vars can stay empty — see "Demo mode" below.
+
+```bash
+npx prisma migrate deploy   # applies the committed migration in prisma/migrations/
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000, click **Sign up**, and you're in.
+
+### Setting up a database (Neon)
+
+1. Create a free project at [neon.tech](https://neon.tech).
+2. Copy its connection string into `DATABASE_URL` in both `.env` and `.env.local`.
+3. Run `npx prisma migrate deploy` (or `npx prisma migrate dev` in development) to create the
+   tables. The schema lives in `prisma/schema.prisma`; the actual migration SQL is already
+   committed in `prisma/migrations/`, so you don't need to generate it yourself.
+
+This was tested end-to-end against a real local Postgres instance during development (register →
+log in → open/close a Paper Trading position → track a wallet → follow a Copy Trading trader →
+reset account data all worked correctly) — the only thing not tested live is Neon specifically,
+since this dev environment can't reach the public internet to create one.
 
 ## Demo mode (current default)
 
@@ -85,12 +114,12 @@ Nothing above requires any keys. This is the state the app ships in.
    ```
    and point a Stripe webhook endpoint at `POST /api/stripe/webhook` (use `stripe listen --forward-to
    localhost:3000/api/stripe/webhook` locally).
-5. **Known limitation:** Oddlytics has no user accounts or database yet — "subscribed" status
-   lives in the browser's `localStorage` (`lib/hooks/useSubscription.ts`). The webhook route
-   verifies real Stripe signatures but can't persist anything server-side yet (see the TODO
-   comment inside it). Real production use of the paywall needs a users/subscriptions table keyed
-   by Stripe customer ID before the webhook path is meaningful — flag this if/when you're ready to
-   go past test mode.
+5. Now that there's a real `User` table, the webhook actually persists subscription state:
+   checkout session creation sets `client_reference_id` to the logged-in user's id, and on
+   `checkout.session.completed` the webhook writes `subscribed: true` (and stores
+   `stripeCustomerId`) onto that user; `customer.subscription.deleted` flips it back off by looking
+   up the user via `stripeCustomerId`. This closes the gap that existed before accounts/DB were
+   added.
 
 ### 3. Market data (already live, no keys needed)
 
@@ -122,6 +151,7 @@ data, no auth, nothing to configure. Two things worth knowing:
 app/
   page.tsx                          landing page (marketing chrome)
   pricing/page.tsx                  pricing page, drives the (mocked) checkout
+  login/page.tsx, signup/page.tsx   email/password auth (bare chrome)
   dashboard/page.tsx                feature nav grid + portfolio/subscription/recent-analyses overview
   analyzer/page.tsx                 AI Analyzer UI (live market + screenshot modes) + Coach panel
   coach/page.tsx                    standalone AI Coach chat
@@ -129,20 +159,29 @@ app/
   handpicked-bets/page.tsx          paywalled curated picks
   wallet-tracker/page.tsx           real Polymarket leaderboard + per-wallet trade history
   copy-trading/page.tsx             follow real traders, auto-mirror into Paper Trading
-  settings/page.tsx                 localStorage-only account state, demo-data reset
+  settings/page.tsx                 account state, reset account data, log out
   checkout/mock/page.tsx            fake Stripe Checkout UI for test-mode flow (app chrome-free)
+  api/auth/[...nextauth]/route.ts   NextAuth (login/session/logout)
+  api/auth/register/route.ts        creates a user (bcrypt-hashed password)
   api/analyze/route.ts              mock-or-real Analysis Engine call (ANTHROPIC_API_KEY-gated)
   api/coach/route.ts                mock-or-real AI Coach call (ANTHROPIC_API_KEY-gated)
   api/markets/resolve/route.ts      resolves a pasted URL/slug/ticker to live YES/NO prices
   api/traders/leaderboard/route.ts          real Polymarket trader leaderboard
   api/traders/[address]/trades/route.ts     real per-wallet trade history
   api/traders/recent-activity/route.ts      real recent sizeable trades, powers the social-proof toast
+  api/paper-trading/route.ts        DB-backed positions/cash (GET; POST action: open/close/reset)
+  api/wallets/route.ts              DB-backed Wallet Tracker tracked list
+  api/copy-trading/route.ts         DB-backed follows + feed (POST action: follow/unfollow/sync)
+  api/analysis-history/route.ts     DB-backed recent-analyses list
+  api/subscription/route.ts         DB-backed paywall state
+  api/account/route.ts              display name + account-data reset
   api/config/route.ts               exposes aiEnabled/stripeEnabled flags to the client
-  api/stripe/create-checkout-session/route.ts   mock-or-real Stripe Checkout session
+  api/stripe/create-checkout-session/route.ts   mock-or-real Stripe Checkout session (auth required)
   api/stripe/verify-session/route.ts            mock-or-real payment verification
-  api/stripe/webhook/route.ts                   Stripe webhook scaffold (STRIPE_WEBHOOK_SECRET-gated)
+  api/stripe/webhook/route.ts                   real webhook, persists subscription to the DB
 components/
-  AppChrome.tsx                     picks marketing topnav vs. app sidebar vs. bare (checkout) per route
+  AppChrome.tsx                     picks marketing topnav vs. app sidebar vs. bare (checkout/login/signup) per route
+  AuthProvider.tsx                  wraps the app in NextAuth's SessionProvider
   Nav.tsx, Sidebar.tsx, ModeBadge.tsx   marketing topnav, in-app icon sidebar, live/demo indicator
   UrgencyBanner.tsx, SocialProofToast.tsx, ExitIntentModal.tsx, ProfitCalculator.tsx, FaqAccordion.tsx
   AnalysisResultView.tsx            renders a structured analysis + "paper trade this pick"
@@ -152,6 +191,9 @@ lib/
   types.ts                          shared TypeScript types
   promo.ts                          persisted (non-resetting) offer countdown deadline
   anthropic.ts / stripe.ts          API client getters
+  auth.ts                           NextAuth config (credentials provider, JWT sessions)
+  session.ts                        requireUserId() helper for route handlers
+  prisma.ts                         Prisma client singleton
   markets/polymarket.ts             Gamma API client
   markets/kalshi.ts                 Kalshi Trade API v2 client
   markets/polymarketTraders.ts      real Polymarket Data API client (leaderboard + trades)
@@ -159,19 +201,26 @@ lib/
   mocks/coach.ts                    mock Coach reply generator
   mocks/handpicks.ts                static curated mock picks
   mocks/priceSimulator.ts           deterministic price drift for open paper positions
-  hooks/usePaperTrading.ts          localStorage-backed paper portfolio
-  hooks/useSubscription.ts          localStorage-backed paywall state
-  hooks/useAnalysisHistory.ts       localStorage-backed recent-analyses list
+  hooks/usePaperTrading.ts          fetches /api/paper-trading
+  hooks/useSubscription.ts          fetches /api/subscription
+  hooks/useAnalysisHistory.ts       fetches /api/analysis-history
   hooks/useAppConfig.ts             reads /api/config for the Live/Demo badge
-  hooks/useTrackedWallets.ts        localStorage-backed Wallet Tracker tracked list
-  hooks/useCopyTrading.ts           localStorage-backed Copy Trading follows + mirrored-trade feed
-  hooks/useSettings.ts              localStorage-backed display name
+  hooks/useTrackedWallets.ts        fetches /api/wallets
+  hooks/useCopyTrading.ts           fetches /api/copy-trading
+  hooks/useSettings.ts              fetches /api/account (display name)
+prisma/
+  schema.prisma                     User, PaperPosition, TrackedWallet, CopyFollow, MirroredTrade, AnalysisRecord
+  migrations/                       committed migration SQL — run with `prisma migrate deploy`
+middleware.ts                       redirects unauthenticated visitors to /login for every app route
 ```
 
 ## Environment variables
 
 | Variable                | Required | Default            | Enables                          |
 | ------------------------ | -------- | ------------------- | --------------------------------- |
+| `NEXTAUTH_SECRET`        | **yes**  | —                    | Session signing — the app won't start meaningfully without it |
+| `NEXTAUTH_URL`           | **yes**  | —                    | e.g. `http://localhost:3000` locally |
+| `DATABASE_URL`           | **yes**  | —                    | Postgres connection string (e.g. Neon) |
 | `ANTHROPIC_API_KEY`      | no       | unset (mocked)       | Real AI Analyzer + AI Coach       |
 | `ANALYSIS_MODEL`         | no       | `claude-sonnet-5`    | —                                  |
 | `COACH_MODEL`            | no       | `claude-sonnet-5`    | —                                  |
@@ -189,9 +238,11 @@ app (Pricing page, `/checkout/mock`, `useSubscription`) doesn't need to change, 
 know about `POST /api/stripe/create-checkout-session` returning `{ url }` and
 `GET /api/stripe/verify-session` returning `{ paid }`, not Stripe specifics.
 
-## Persistence caveat
+## Persistence
 
-Paper Trading positions, subscription status, and analysis history are all stored in the
-**browser's `localStorage`** — there's no backend database or user accounts yet. This is
-intentional for the current mocked/demo build; it means state doesn't sync across devices and
-resets if you clear site data. Worth revisiting before any real users rely on it.
+Accounts, Paper Trading positions/cash, subscription status, tracked wallets, Copy Trading follows
+and their mirrored-trade feed, and analysis history are all real Postgres rows scoped to the
+logged-in user (see `prisma/schema.prisma`), not browser storage. State now syncs across devices
+and survives clearing site data — the only thing still stored client-side is the Urgency Banner's
+countdown deadline (`lib/promo.ts`, `localStorage`), which is intentionally anonymous/per-browser
+since it's just marketing chrome, not user data.

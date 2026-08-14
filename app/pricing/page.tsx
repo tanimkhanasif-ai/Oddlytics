@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import FaqAccordion from "@/components/FaqAccordion";
 import { useSubscription } from "@/lib/hooks/useSubscription";
 
@@ -16,6 +17,7 @@ const FEATURES = [
 
 export default function PricingPage() {
   const { subscribed, hydrated } = useSubscription();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function startCheckout() {
@@ -26,6 +28,10 @@ export default function PricingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: "all-access" }),
       });
+      if (res.status === 401) {
+        router.push("/login?callbackUrl=/pricing");
+        return;
+      }
       const data = await res.json();
       if (data.url) window.location.href = data.url;
     } finally {

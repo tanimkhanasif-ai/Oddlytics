@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeClient } from "@/lib/stripe";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
@@ -29,16 +30,33 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET
     );
 
-    if (
-      event.type === "checkout.session.completed" ||
-      event.type === "customer.subscription.deleted"
-    ) {
-      // TODO: persist subscription state server-side once there's a real
-      // user/DB layer. Oddlytics currently has no auth or database — the
-      // "subscribed" flag lives in the browser's localStorage (see
-      // lib/hooks/useSubscription.ts), which this webhook can't reach.
-      // Before relying on this in production, add a users/subscriptions
-      // table keyed by Stripe customer ID and update it here.
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as {
+        client_reference_id?: string | null;
+        customer?: string | null;
+      };
+      const userId = session.client_reference_id;
+      const customerId = session.customer;
+      if (userId) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            subscribed: true,
+            ...(typeof customerId === "string" ? { stripeCustomerId: customerId } : {}),
+          },
+        });
+      }
+    }
+
+    if (event.type === "customer.subscription.deleted") {
+      const subscription = event.data.object as { customer?: string | null };
+      const customerId = subscription.customer;
+      if (typeof customerId === "string") {
+        await prisma.user.updateMany({
+          where: { stripeCustomerId: customerId },
+          data: { subscribed: false },
+        });
+      }
     }
 
     return NextResponse.json({ received: true });

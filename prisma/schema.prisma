@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  passwordHash     String
+  name             String?
+  createdAt        DateTime @default(now())
+
+  cashUsd          Float    @default(1000)
+  subscribed       Boolean  @default(false)
+  stripeCustomerId String?  @unique
+
+  positions      PaperPosition[]
+  trackedWallets TrackedWallet[]
+  copyFollows    CopyFollow[]
+  mirroredTrades MirroredTrade[]
+  analyses       AnalysisRecord[]
+}
+
+model PaperPosition {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketQuestion      String
+  platform            String
+  side                String
+  entryPrice          Float
+  sizeUsd             Float
+  openedAt            DateTime  @default(now())
+  status              String    @default("open")
+  closedAt            DateTime?
+  exitPrice           Float?
+  source              String?
+  sourceTraderAddress String?
+
+  @@index([userId])
+}
+
+model TrackedWallet {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletAddress String
+  name          String?
+  trackedAt     DateTime @default(now())
+
+  @@unique([userId, walletAddress])
+}
+
+model CopyFollow {
+  id                       String   @id @default(cuid())
+  userId                   String
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletAddress            String
+  name                     String?
+  allocationUsd            Float
+  followedAt               DateTime @default(now())
+  lastSeenTradeTimestampMs Float    @default(0)
+
+  @@unique([userId, walletAddress])
+}
+
+model MirroredTrade {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  traderLabel String
+  question    String
+  outcome     String?
+  price       Float
+  sizeUsd     Float
+  at          DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AnalysisRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

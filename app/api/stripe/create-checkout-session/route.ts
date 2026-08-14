@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeClient } from "@/lib/stripe";
+import { requireUserId } from "@/lib/session";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Log in first." }, { status: 401 });
+  }
+
   const origin = req.nextUrl.origin;
 
   // ---------------------------------------------------------------------
@@ -11,12 +17,16 @@ export async function POST(req: NextRequest) {
   // STRIPE_SECRET_KEY and STRIPE_PRICE_ID are set in .env.local. Nothing
   // else needs to change for the Handpicked Bets paywall to switch from
   // the mocked test-mode checkout to a real Stripe Checkout session.
+  // client_reference_id ties the session back to our own user id so the
+  // webhook (app/api/stripe/webhook/route.ts) knows whose subscription to
+  // update.
   // ---------------------------------------------------------------------
   if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID) {
     try {
       const stripe = getStripeClient();
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
+        client_reference_id: userId,
         line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
         success_url: `${origin}/handpicked-bets?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/handpicked-bets?checkout=cancelled`,

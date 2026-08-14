@@ -2,33 +2,39 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
 import { useUsername } from "@/lib/hooks/useSettings";
 import { useSubscription } from "@/lib/hooks/useSubscription";
 
-const ALL_LOCAL_KEYS = [
-  "oddlytics_paper_trading_v1",
-  "oddlytics_subscribed_v1",
-  "oddlytics_analysis_history_v1",
-  "oddlytics_tracked_wallets_v1",
-  "oddlytics_copy_trading_v1",
-  "oddlytics_copy_trading_feed_v1",
-  "oddlytics_username_v1",
-  "oddlytics_offer_deadline_v1",
-];
-
 export default function SettingsPage() {
+  const { data: session } = useSession();
   const { username, hydrated, setUsername } = useUsername();
   const { subscribed } = useSubscription();
   const [draft, setDraft] = useState("");
   const [cleared, setCleared] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  async function resetAccountData() {
+    setResetting(true);
+    try {
+      await fetch("/api/account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset" }),
+      });
+      setCleared(true);
+    } finally {
+      setResetting(false);
+    }
+  }
 
   return (
     <div className="max-w-lg space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-white">Settings</h1>
-        <p className="mt-1 text-sm text-gray-400">
-          There's no account system yet — everything here is stored locally in this browser.
-        </p>
+        {session?.user?.email && (
+          <p className="mt-1 text-sm text-gray-400">Signed in as {session.user.email}</p>
+        )}
       </div>
 
       {!subscribed && (
@@ -67,23 +73,30 @@ export default function SettingsPage() {
       </div>
 
       <div className="border-t border-white/10 pt-6">
-        <p className="text-xs font-medium text-gray-400">Demo data</p>
+        <p className="text-xs font-medium text-gray-400">Account data</p>
         <p className="mt-1 text-xs text-gray-500">
           Clears Paper Trading, subscription status, tracked wallets, Copy Trading follows, and
-          analysis history from this browser only.
+          analysis history for your account. Your login stays intact.
         </p>
         <button
-          onClick={() => {
-            ALL_LOCAL_KEYS.forEach((k) => window.localStorage.removeItem(k));
-            setCleared(true);
-          }}
-          className="mt-2 rounded-lg bg-no/10 px-4 py-2 text-sm font-medium text-no hover:bg-no/20"
+          onClick={resetAccountData}
+          disabled={resetting}
+          className="mt-2 rounded-lg bg-no/10 px-4 py-2 text-sm font-medium text-no hover:bg-no/20 disabled:opacity-50"
         >
-          Reset all local demo data
+          {resetting ? "Resetting…" : "Reset account data"}
         </button>
         {cleared && (
           <p className="mt-2 text-xs text-yes">Cleared — reload the page to see it reset.</p>
         )}
+      </div>
+
+      <div className="border-t border-white/10 pt-6">
+        <button
+          onClick={() => signOut({ callbackUrl: "/" })}
+          className="text-sm text-gray-400 hover:text-white"
+        >
+          Log out
+        </button>
       </div>
 
       <div className="border-t border-white/10 pt-6">

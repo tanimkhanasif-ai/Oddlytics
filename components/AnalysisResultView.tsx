@@ -102,14 +102,16 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
     String(result.position_sizing.suggested_amount ?? 25)
   );
   const [confirmed, setConfirmed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const entryPrice =
     result.recommendation === "YES" ? result._yesPrice! : result._noPrice!;
 
-  function confirm() {
+  async function confirm() {
     const sizeUsd = Number(size);
     if (!sizeUsd || sizeUsd <= 0) return;
-    openPosition({
+    setError(null);
+    const ok = await openPosition({
       marketQuestion: result.market_question,
       platform: result.platform,
       side: result.recommendation,
@@ -117,8 +119,12 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
       sizeUsd,
       source: "analyzer",
     });
-    setConfirmed(true);
-    setOpen(false);
+    if (ok) {
+      setConfirmed(true);
+      setOpen(false);
+    } else {
+      setError("Not enough virtual cash for that size.");
+    }
   }
 
   if (confirmed) {
@@ -163,6 +169,7 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
       <span className="w-full text-xs text-gray-500">
         Available virtual cash: {formatUsd(cashUsd)}
       </span>
+      {error && <p className="w-full text-xs text-no">{error}</p>}
     </div>
   );
 }

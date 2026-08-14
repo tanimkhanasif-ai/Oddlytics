@@ -93,9 +93,9 @@ export default function CopyTradingPage() {
             {feed.map((e, i) => (
               <div key={i} className="rounded-lg border border-white/10 bg-black/20 p-3 text-sm">
                 <p className="text-gray-300">
-                  Mirrored {e.trade.outcome} on{" "}
-                  <span className="text-gray-400">{e.trade.question || e.trade.market}</span> —{" "}
-                  {formatUsd(e.sizeUsd)} @ {(e.trade.price * 100).toFixed(0)}¢
+                  Mirrored {e.outcome ?? "a position"} on{" "}
+                  <span className="text-gray-400">{e.question}</span> — {formatUsd(e.sizeUsd)} @{" "}
+                  {(e.price * 100).toFixed(0)}¢
                 </p>
                 <p className="mt-0.5 text-xs text-gray-500">
                   Following {e.traderLabel} · {new Date(e.at).toLocaleString()}

@@ -1,27 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { readLocalStorage, writeLocalStorage } from "@/lib/storage";
+import { useSession } from "next-auth/react";
 import type { AnalysisResult } from "@/lib/types";
 
-const STORAGE_KEY = "oddlytics_analysis_history_v1";
-const MAX_ITEMS = 10;
-
 export function useAnalysisHistory() {
+  const { status } = useSession();
   const [history, setHistory] = useState<AnalysisResult[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setHistory(readLocalStorage(STORAGE_KEY, []));
-    setHydrated(true);
-  }, []);
+    if (status === "authenticated") {
+      fetch("/api/analysis-history")
+        .then((r) => r.json())
+        .then((data) => setHistory(data.history ?? []))
+        .finally(() => setHydrated(true));
+    } else if (status === "unauthenticated") {
+      setHydrated(true);
+    }
+  }, [status]);
 
   const record = useCallback((result: AnalysisResult) => {
-    setHistory((prev) => {
-      const next = [result, ...prev].slice(0, MAX_ITEMS);
-      writeLocalStorage(STORAGE_KEY, next);
-      return next;
-    });
+    setHistory((prev) => [result, ...prev].slice(0, 10));
+    fetch("/api/analysis-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ result }),
+    }).catch(() => {});
   }, []);
 
   return { history, hydrated, record };

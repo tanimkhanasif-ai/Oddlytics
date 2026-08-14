@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import ModeBadge from "@/components/ModeBadge";
 import type { SVGProps } from "react";
 
@@ -68,6 +69,13 @@ const GearIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
   </Icon>
 );
+const LogoutIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <path d="m16 17 5-5-5-5" />
+    <path d="M21 12H9" />
+  </Icon>
+);
 
 const ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
@@ -81,6 +89,7 @@ const ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname() || "";
+  const { data: session } = useSession();
 
   return (
     <aside className="flex w-16 shrink-0 flex-col items-center gap-1 border-r border-white/10 bg-black/20 py-4 sm:w-56 sm:items-stretch sm:px-3">
@@ -130,6 +139,22 @@ export default function Sidebar() {
         <div className="hidden justify-center px-1 pt-1 sm:flex">
           <ModeBadge />
         </div>
+        {session?.user?.email && (
+          <p
+            className="hidden truncate px-2 pt-2 text-xs text-gray-500 sm:block"
+            title={session.user.email}
+          >
+            {session.user.email}
+          </p>
+        )}
+        <button
+          onClick={() => signOut({ callbackUrl: "/" })}
+          title="Log out"
+          className="flex items-center justify-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-gray-400 hover:bg-white/5 hover:text-white sm:justify-start"
+        >
+          <LogoutIcon className="h-5 w-5 shrink-0" />
+          <span className="hidden sm:inline">Log out</span>
+        </button>
       </div>
     </aside>
   );

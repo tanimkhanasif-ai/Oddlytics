@@ -1,26 +1,39 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { readLocalStorage, writeLocalStorage } from "@/lib/storage";
-
-const STORAGE_KEY = "oddlytics_subscribed_v1";
+import { useSession } from "next-auth/react";
 
 export function useSubscription() {
+  const { status } = useSession();
   const [subscribed, setSubscribed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setSubscribed(readLocalStorage(STORAGE_KEY, false));
-    setHydrated(true);
-  }, []);
+    if (status === "authenticated") {
+      fetch("/api/subscription")
+        .then((r) => r.json())
+        .then((data) => setSubscribed(!!data.subscribed))
+        .finally(() => setHydrated(true));
+    } else if (status === "unauthenticated") {
+      setHydrated(true);
+    }
+  }, [status]);
 
-  const activate = useCallback(() => {
-    writeLocalStorage(STORAGE_KEY, true);
+  const activate = useCallback(async () => {
+    await fetch("/api/subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscribed: true }),
+    });
     setSubscribed(true);
   }, []);
 
-  const deactivate = useCallback(() => {
-    writeLocalStorage(STORAGE_KEY, false);
+  const deactivate = useCallback(async () => {
+    await fetch("/api/subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscribed: false }),
+    });
     setSubscribed(false);
   }, []);
 
