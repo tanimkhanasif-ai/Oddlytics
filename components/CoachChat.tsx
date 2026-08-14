@@ -8,6 +8,7 @@ export default function CoachChat({ context }: { context: AnalysisResult | null 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mockMode, setMockMode] = useState<boolean | null>(null);
 
   async function send() {
     const text = input.trim();
@@ -26,6 +27,7 @@ export default function CoachChat({ context }: { context: AnalysisResult | null 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Coach reply failed.");
       setMessages([...nextMessages, { role: "assistant", content: data.reply }]);
+      setMockMode(Boolean(data._mock));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -40,6 +42,11 @@ export default function CoachChat({ context }: { context: AnalysisResult | null 
         <p className="text-xs text-gray-500">
           Ask what a term means or have this pick explained. Informational only — not advice.
         </p>
+        {mockMode && (
+          <p className="mt-1 text-xs text-gray-600">
+            Demo mode — canned replies until ANTHROPIC_API_KEY is connected.
+          </p>
+        )}
       </div>
 
       <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">

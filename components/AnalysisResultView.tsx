@@ -1,15 +1,31 @@
+"use client";
+
+import { useState } from "react";
+import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
 import type { AnalysisResult } from "@/lib/types";
+import { formatUsd } from "@/lib/utils";
 
 export default function AnalysisResultView({ result }: { result: AnalysisResult }) {
   const isYes = result.recommendation === "YES";
+  const canPaperTrade =
+    result.recommendation === "YES"
+      ? typeof result._yesPrice === "number"
+      : typeof result._noPrice === "number";
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-wide text-gray-500">
-            {result.platform === "screenshot" ? "From screenshot" : result.platform}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs uppercase tracking-wide text-gray-500">
+              {result.platform === "screenshot" ? "From screenshot" : result.platform}
+            </p>
+            {result._mock && (
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                Demo data
+              </span>
+            )}
+          </div>
           <h2 className="mt-1 text-lg font-medium text-white">{result.market_question}</h2>
         </div>
         <span
@@ -51,7 +67,7 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
         <p className="text-sm text-gray-300">
           {result.position_sizing.suggested_pct_of_capital}% of capital
           {result.position_sizing.suggested_amount != null
-            ? ` (~$${result.position_sizing.suggested_amount.toLocaleString()})`
+            ? ` (~${formatUsd(result.position_sizing.suggested_amount)})`
             : ""}
         </p>
         <p className="mt-1 text-sm text-gray-500">{result.position_sizing.rationale}</p>
@@ -69,6 +85,83 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
           ))}
         </ul>
       </Section>
+
+      {canPaperTrade && (
+        <div className="mt-5 border-t border-white/10 pt-5">
+          <PaperTradeAction result={result} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaperTradeAction({ result }: { result: AnalysisResult }) {
+  const { openPosition, cashUsd, hydrated } = usePaperTrading();
+  const [open, setOpen] = useState(false);
+  const [size, setSize] = useState(
+    String(result.position_sizing.suggested_amount ?? 25)
+  );
+  const [confirmed, setConfirmed] = useState(false);
+
+  const entryPrice =
+    result.recommendation === "YES" ? result._yesPrice! : result._noPrice!;
+
+  function confirm() {
+    const sizeUsd = Number(size);
+    if (!sizeUsd || sizeUsd <= 0) return;
+    openPosition({
+      marketQuestion: result.market_question,
+      platform: result.platform,
+      side: result.recommendation,
+      entryPrice,
+      sizeUsd,
+    });
+    setConfirmed(true);
+    setOpen(false);
+  }
+
+  if (confirmed) {
+    return <p className="text-sm text-yes">Added to Paper Trading — check the Paper Trading page.</p>;
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+      >
+        Paper trade this pick
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <label className="text-sm text-gray-400">
+        Size (virtual USD)
+        <input
+          value={size}
+          onChange={(e) => setSize(e.target.value)}
+          inputMode="decimal"
+          className="ml-2 w-24 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-sm text-white"
+        />
+      </label>
+      <button
+        onClick={confirm}
+        disabled={!hydrated}
+        className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+      >
+        Confirm {result.recommendation} @ {(entryPrice * 100).toFixed(0)}¢
+      </button>
+      <button
+        onClick={() => setOpen(false)}
+        className="text-sm text-gray-500 hover:text-white"
+      >
+        Cancel
+      </button>
+      <span className="w-full text-xs text-gray-500">
+        Available virtual cash: {formatUsd(cashUsd)}
+      </span>
     </div>
   );
 }

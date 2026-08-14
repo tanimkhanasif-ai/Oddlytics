@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type Anthropic from "@anthropic-ai/sdk";
 import { getAnthropicClient, ANALYSIS_MODEL } from "@/lib/anthropic";
 import { ANALYSIS_ENGINE_SYSTEM_PROMPT } from "@/lib/prompts";
-import type { AnalysisResult } from "@/lib/types";
+import { generateMockAnalysis } from "@/lib/mocks/analysis";
+import type { AnalysisResult, Platform } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -29,6 +30,10 @@ function isAnalysisResult(value: unknown): value is AnalysisResult {
   );
 }
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body) {
@@ -38,36 +43,9 @@ export async function POST(req: NextRequest) {
   const { mode, platform, question, yesPrice, noPrice, imageBase64, imageMediaType, capitalUsd } =
     body as Record<string, unknown>;
 
-  let userContent: Anthropic.MessageParam["content"];
+  const isScreenshot = mode === "screenshot";
 
-  if (mode === "screenshot") {
-    if (typeof imageBase64 !== "string" || typeof imageMediaType !== "string") {
-      return NextResponse.json({ error: "Missing screenshot image." }, { status: 400 });
-    }
-    userContent = [
-      {
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: imageMediaType as
-            | "image/jpeg"
-            | "image/png"
-            | "image/gif"
-            | "image/webp",
-          data: imageBase64,
-        },
-      },
-      {
-        type: "text",
-        text: [
-          "This is a screenshot of a prediction-market question. Read the question and any visible prices/odds directly from the image.",
-          typeof capitalUsd === "number"
-            ? `Available trading capital: $${capitalUsd}`
-            : "No capital figure was provided.",
-        ].join("\n"),
-      },
-    ];
-  } else {
+  if (!isScreenshot) {
     if (
       typeof question !== "string" ||
       typeof yesPrice !== "number" ||
@@ -79,20 +57,69 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const lines = [
+  } else if (typeof imageBase64 !== "string" || typeof imageMediaType !== "string") {
+    return NextResponse.json({ error: "Missing screenshot image." }, { status: 400 });
+  }
+
+  const capital = typeof capitalUsd === "number" ? capitalUsd : undefined;
+
+  // ---------------------------------------------------------------------
+  // MOCK PATH (active whenever ANTHROPIC_API_KEY is unset — the default
+  // for local dev right now). Returns realistic fake data matching the
+  // exact analyzer output schema so the rest of the app is fully testable
+  // without spending real API calls.
+  // ---------------------------------------------------------------------
+  if (!process.env.ANTHROPIC_API_KEY) {
+    await delay(500 + Math.random() * 500);
+    const mock = generateMockAnalysis({
+      question: isScreenshot ? "Uploaded market screenshot" : (question as string),
+      platform: isScreenshot ? "screenshot" : (platform as Platform),
+      yesPrice: isScreenshot ? undefined : (yesPrice as number),
+      noPrice: isScreenshot ? undefined : (noPrice as number),
+      capitalUsd: capital,
+    });
+    return NextResponse.json({
+      ...mock.result,
+      _yesPrice: mock.yesPrice,
+      _noPrice: mock.noPrice,
+    });
+  }
+
+  // TODO: real Anthropic API call goes here. This block only runs once
+  // ANTHROPIC_API_KEY is set in .env.local — nothing else needs to change
+  // for the app to switch from mocked to live analysis.
+  let userContent: Anthropic.MessageParam["content"];
+
+  if (isScreenshot) {
+    userContent = [
+      {
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: imageMediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+          data: imageBase64 as string,
+        },
+      },
+      {
+        type: "text",
+        text: [
+          "This is a screenshot of a prediction-market question. Read the question and any visible prices/odds directly from the image.",
+          capital != null ? `Available trading capital: $${capital}` : "No capital figure was provided.",
+        ].join("\n"),
+      },
+    ];
+  } else {
+    userContent = [
       `Market question: ${question}`,
       `Platform: ${platform}`,
-      `Current YES price: ${(yesPrice * 100).toFixed(1)}¢ (implied probability ${(
-        yesPrice * 100
+      `Current YES price: ${((yesPrice as number) * 100).toFixed(1)}¢ (implied probability ${(
+        (yesPrice as number) * 100
       ).toFixed(1)}%)`,
-      `Current NO price: ${(noPrice * 100).toFixed(1)}¢ (implied probability ${(
-        noPrice * 100
+      `Current NO price: ${((noPrice as number) * 100).toFixed(1)}¢ (implied probability ${(
+        (noPrice as number) * 100
       ).toFixed(1)}%)`,
-      typeof capitalUsd === "number"
-        ? `Available trading capital: $${capitalUsd}`
-        : "No capital figure was provided.",
-    ];
-    userContent = lines.join("\n");
+      capital != null ? `Available trading capital: $${capital}` : "No capital figure was provided.",
+    ].join("\n");
   }
 
   try {
@@ -126,7 +153,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json(parsed);
+    return NextResponse.json({
+      ...parsed,
+      _yesPrice: isScreenshot ? undefined : (yesPrice as number),
+      _noPrice: isScreenshot ? undefined : (noPrice as number),
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Analysis failed.";
     return NextResponse.json({ error: message }, { status: 500 });

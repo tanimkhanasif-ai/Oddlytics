@@ -17,6 +17,10 @@ export interface AnalysisResult {
   take_profit: { sell_if_price_reaches: string };
   stop_loss: { sell_if_price_falls_to: string };
   exit_if: string[];
+  /** Server-attached metadata, not part of the model's own output contract. */
+  _mock?: boolean;
+  _yesPrice?: number;
+  _noPrice?: number;
 }
 
 export interface MarketQuote {
@@ -30,4 +34,34 @@ export interface MarketQuote {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+}
+
+export interface PaperPosition {
+  id: string;
+  marketQuestion: string;
+  platform: Platform;
+  side: "YES" | "NO";
+  entryPrice: number;
+  sizeUsd: number;
+  openedAt: string;
+  status: "open" | "closed";
+  closedAt?: string;
+  exitPrice?: number;
+}
+
+export interface PaperTradingState {
+  cashUsd: number;
+  positions: PaperPosition[];
+}
+
+export interface HandpickedBet {
+  id: string;
+  category: string;
+  postedAt: string;
+  analysis: AnalysisResult;
+}
+
+export interface AppConfig {
+  aiEnabled: boolean;
+  stripeEnabled: boolean;
 }

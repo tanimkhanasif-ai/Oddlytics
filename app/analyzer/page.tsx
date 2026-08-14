@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import CoachChat from "@/components/CoachChat";
+import { useAnalysisHistory } from "@/lib/hooks/useAnalysisHistory";
 import type { AnalysisResult, MarketQuote } from "@/lib/types";
 
 type Mode = "live" | "screenshot";
@@ -25,6 +26,8 @@ export default function AnalyzerPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+
+  const { record } = useAnalysisHistory();
 
   const capitalUsd = capital.trim() ? Number(capital) : undefined;
 
@@ -73,6 +76,7 @@ export default function AnalyzerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Analysis failed.");
       setResult(data);
+      record(data);
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Analysis failed.");
     } finally {
@@ -113,6 +117,7 @@ export default function AnalyzerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Analysis failed.");
       setResult(data);
+      record(data);
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Analysis failed.");
     } finally {
