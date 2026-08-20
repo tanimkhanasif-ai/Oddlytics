@@ -30,6 +30,8 @@ export interface TraderTrade {
   size: number;
   price: number;
   timestampMs: number;
+  /** The trader's real, self-set Polymarket display name, when known — never invented. */
+  traderName?: string | null;
 }
 
 /** Response field names aren't fully nailed down from docs alone, so read defensively across the plausible variants. */
@@ -103,7 +105,10 @@ export async function fetchTraderTrades(
 export async function fetchRecentNotableTrades(limit = 8): Promise<TraderTrade[]> {
   const traders = await fetchTopTraders("DAY", 5);
   const results = await Promise.allSettled(
-    traders.map((t) => fetchTraderTrades(t.walletAddress, 5))
+    traders.map(async (t) => {
+      const trades = await fetchTraderTrades(t.walletAddress, 5);
+      return trades.map((trade): TraderTrade => ({ ...trade, traderName: t.name }));
+    })
   );
   const trades = results
     .filter((r): r is PromiseFulfilledResult<TraderTrade[]> => r.status === "fulfilled")

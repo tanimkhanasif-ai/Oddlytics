@@ -6,3 +6,36 @@ body {
   background-color: #0b0f17;
   color: #e5e7eb;
 }
+
+/* Marketing-page decorative backdrop: green aurora glow + scattered dot particles,
+   matching the landing-page screenshots. Purely decorative, pointer-events disabled. */
+.marketing-bg {
+  position: relative;
+  background-color: #05070a;
+  isolation: isolate;
+}
+
+.marketing-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image:
+    radial-gradient(ellipse 90% 55% at 15% 0%, rgba(34, 197, 94, 0.22), transparent 60%),
+    radial-gradient(ellipse 70% 45% at 85% 15%, rgba(34, 197, 94, 0.14), transparent 60%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(34, 197, 94, 0.2), transparent 65%);
+}
+
+.marketing-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: radial-gradient(rgba(74, 222, 128, 0.35) 1px, transparent 1px);
+  background-size: 42px 42px;
+  background-position: 10px 10px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 20%, black, transparent 75%);
+}

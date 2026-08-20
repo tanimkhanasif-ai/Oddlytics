@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { getOfferDeadline } from "@/lib/promo";
 
 const DISMISS_KEY = "oddlytics_banner_dismissed";
+
+/** Real wall-clock deadline: today at 23:59:59 local time (tomorrow's if that's already passed). */
+function getTonightDeadline(): number {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+  return d.getTime();
+}
 
 function formatRemaining(ms: number): string {
   if (ms <= 0) return "0:00:00";
@@ -21,25 +27,25 @@ export default function UrgencyBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    setDeadline(getOfferDeadline());
+    setDeadline(getTonightDeadline());
     setNow(Date.now());
     if (window.sessionStorage.getItem(DISMISS_KEY)) setDismissed(true);
-    const interval = setInterval(() => setNow(Date.now()), 1000);
+    const interval = setInterval(() => {
+      const n = Date.now();
+      setNow(n);
+      // Roll over to the next night's deadline the instant this one hits zero.
+      setDeadline((d) => (d !== null && n >= d ? getTonightDeadline() : d));
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
   if (!deadline || now === null || dismissed) return null;
   const remaining = deadline - now;
-  if (remaining <= 0) return null;
 
   return (
-    <div className="flex items-center justify-center gap-3 bg-blue-600 px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
+    <div className="relative z-20 flex items-center justify-center gap-3 bg-gradient-to-r from-brand-dark via-brand to-brand-bright px-4 py-2.5 text-center text-xs font-semibold text-black sm:text-sm">
       <span>
-        Placeholder promo — first week for $1, pricing not finalized. Ends in{" "}
-        {formatRemaining(remaining)}.{" "}
-        <Link href="/pricing" className="underline">
-          See pricing
-        </Link>
+        🔥 First week $1 (placeholder pricing). Offer ends 11:59pm tonight: {formatRemaining(remaining)}
       </span>
       <button
         onClick={() => {
@@ -47,7 +53,7 @@ export default function UrgencyBanner() {
           setDismissed(true);
         }}
         aria-label="Dismiss"
-        className="shrink-0 text-white/70 hover:text-white"
+        className="shrink-0 text-black/60 hover:text-black"
       >
         ✕
       </button>

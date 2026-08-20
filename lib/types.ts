@@ -84,6 +84,7 @@ export interface TraderTrade {
   size: number;
   price: number;
   timestampMs: number;
+  traderName?: string | null;
 }
 
 export interface TrackedWallet {
