@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { DollarSign, Trophy, TrendingUp } from "lucide-react";
-import { formatUsd } from "@/lib/utils";
+
+/** Whole-dollar formatting (no cents) — matches the reference design for this component only. */
+function formatWholeUsd(amount: number): string {
+  return amount.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
+}
 
 export default function ProfitCalculator() {
   const [avgProfit, setAvgProfit] = useState(100);
@@ -20,7 +28,7 @@ export default function ProfitCalculator() {
           min={0}
           max={1000}
           step={10}
-          format={(v) => (v >= 1000 ? "$1000+" : formatUsd(v))}
+          format={(v) => (v >= 1000 ? "$1000+" : formatWholeUsd(v))}
         />
         <SliderField
           icon={Trophy}
@@ -42,7 +50,7 @@ export default function ProfitCalculator() {
           <p className="text-sm text-gray-300">Your estimated monthly profit</p>
         </div>
         <div className="rounded-xl border border-brand/40 bg-brand/10 px-5 py-2.5">
-          <p className="text-xl font-bold text-brand-bright sm:text-2xl">{formatUsd(total)}</p>
+          <p className="text-xl font-bold text-brand-bright sm:text-2xl">{formatWholeUsd(total)}</p>
         </div>
       </div>
 

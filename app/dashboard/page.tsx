@@ -128,7 +128,7 @@ export default function DashboardPage() {
             ))}
           </div>
           <p className="text-sm text-gray-200">
-            <span className="font-semibold text-white">$3,261,863+</span> won by people like you
+            <span className="font-semibold text-white">$3261863+</span> won by people like you
           </p>
           <BadgeCheck className="h-4 w-4 text-blue-400" />
         </div>

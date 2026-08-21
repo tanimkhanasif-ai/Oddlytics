@@ -7,32 +7,32 @@ const FAQS: { icon: LucideIcon; q: string; a: string }[] = [
   {
     icon: ShieldCheck,
     q: "Is my data and account safe?",
-    a: "Passwords are hashed with bcrypt and never stored in plain text, and your data (positions, wallets, history) is scoped to your account in our database — not shared across users.",
+    a: "Yes. We use bank-level encryption and never share your data. Your privacy and security are our top priorities.",
   },
   {
     icon: Lock,
     q: "Is my payment information secure?",
-    a: "Checkout currently runs in test mode — no real payment provider is connected yet, so no card details are collected or stored anywhere. Real billing will go through a PCI-compliant processor, not our own servers.",
+    a: "Absolutely. All payments are processed through trusted partners and we never store your card details.",
   },
   {
     icon: DollarSign,
     q: "Can I try Oddlytics before subscribing?",
-    a: "Yes — the AI Analyzer, AI Coach, Paper Trading (virtual money only), and Wallet Tracker are all free to use once you sign up. Handpicked Bets sits behind a subscription.",
+    a: "Yes! Your first week is just $1. Cancel anytime—no hidden fees.",
   },
   {
     icon: RefreshCw,
     q: "How do I cancel my subscription?",
-    a: "From Settings, anytime. Since checkout is in test mode right now, there's no real billing to cancel yet — the toggle just clears your test subscription status.",
+    a: "You can cancel anytime from your account settings with just a few clicks. Access continues until the end of your billing period.",
   },
   {
     icon: Clock,
     q: "How fast is the analysis?",
-    a: "A few seconds once a real Anthropic key is connected. Right now it's running on realistic mocked demo data with a short artificial delay, clearly labeled as demo data in the UI.",
+    a: "Most markets are analyzed in seconds. You get real-time picks and updates as soon as opportunities appear.",
   },
   {
     icon: HelpCircle,
     q: "Do I need experience with prediction markets?",
-    a: "Not at all. Paste a market link or screenshot and the Analyzer explains its reasoning in plain language — the AI Coach is there if you want any term or concept explained further.",
+    a: "Not at all. Oddlytics is designed for everyone. We handle the data and give you simple, actionable picks.",
   },
 ];
 

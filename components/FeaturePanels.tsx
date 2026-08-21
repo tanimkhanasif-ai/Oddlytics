@@ -42,7 +42,7 @@ const PANELS: Panel[] = [
       {
         icon: ShieldCheck,
         title: "Confidence scores, risks & exit plans",
-        body: "See a confidence level, key risks, and take-profit/stop-loss rules so you know exactly when to enter or walk away.",
+        body: "See confidence levels, potential risks, and smart exit strategies so you always know exactly when to enter or when to walk away.",
         cta: "Try the Analyzer",
         href: "/analyzer",
       },
@@ -52,19 +52,19 @@ const PANELS: Panel[] = [
     tone: "brightGreen",
     title: "Daily top picks, curated by AI.",
     subtitle:
-      "Our AI scans markets, news, and live data to surface curated opportunities — so you can skip the noise.",
+      "Our AI scans the entire web to surface the highest-quality opportunities—so you can skip the noise and bet with confidence.",
     columns: [
       {
         icon: Star,
         title: "Curated picks, updated daily",
-        body: "A refreshed feed of picks with full reasoning behind each one. No noise — just analysis you can act on.",
+        body: "We analyze hundreds of markets, news, and live data to bring you only the highest-probability picks. No noise. Just opportunities.",
         cta: "See Today's Picks",
         href: "/handpicked-bets",
       },
       {
         icon: Calendar,
         title: "Know what to bet, and when",
-        body: "Each pick includes entry price, target price, and reasoning — giving you the clarity to act fast and confidently.",
+        body: "Each pick includes entry timing, target price, and reasoning—giving you the clarity to act fast and confidently.",
         cta: "See Today's Picks",
         href: "/handpicked-bets",
       },
@@ -78,14 +78,14 @@ const PANELS: Panel[] = [
       {
         icon: User,
         title: "Personal guidance, on demand",
-        body: "Whether it's a term you don't know or a strategy you want explained, the AI Coach walks you through it step-by-step.",
+        body: "Whether it's position advice, risk management, or strategy breakdowns—our AI coach guides you step-by-step.",
         cta: "Try AI Coach",
         href: "/coach",
       },
       {
         icon: BarChart3,
         title: "Built on live market data",
-        body: "The Coach can see your current analysis or paper-trading position and reference it directly in its answers.",
+        body: "Our coach analyzes real-time prices, trends, and your portfolio context to give you relevant guidance you can trust.",
         cta: "See How It Works",
         href: "/coach",
       },

@@ -6,19 +6,19 @@ const STEPS = [
     icon: UploadCloud,
     step: "Step 1",
     title: "Upload Screenshot",
-    body: "Drop a screenshot of any market, or paste a Polymarket/Kalshi link.",
+    body: "Drop a screenshot of any market.",
   },
   {
     icon: Brain,
     step: "Step 2",
     title: "AI Predicts",
-    body: "Our AI reads the question and current price and reasons through the edge.",
+    body: "Our AI scans news & data for your edge.",
   },
   {
     icon: Target,
     step: "Step 3",
     title: "Get Your Pick",
-    body: "Get a clear pick with confidence, risks, and exit rules. Decide your move.",
+    body: "Get a clear pick. Decide your move.",
   },
 ];
 

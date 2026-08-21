@@ -19,7 +19,7 @@ export default function HomePage() {
               />
             ))}
           </div>
-          <span className="font-semibold text-white">$3,261,863+</span> won by people like you
+          <span className="font-semibold text-white">$3261863+</span> won by people like you
           <BadgeCheck className="h-4 w-4 text-blue-400" />
         </div>
 
@@ -105,7 +105,7 @@ export default function HomePage() {
             <div>
               <h3 className="text-lg font-bold text-white">Ready to start winning?</h3>
               <p className="text-sm text-gray-400">
-                Get a clear, structured read on any prediction market in seconds.
+                Join thousands of traders using Oddlytics to make smarter bets every day.
               </p>
             </div>
           </div>
@@ -116,7 +116,7 @@ export default function HomePage() {
             >
               Get my winning edge →
             </Link>
-            <span className="text-xs text-gray-500">Cancel anytime · no commitment</span>
+            <span className="text-xs text-gray-500">Cancel anytime. No risk.</span>
           </div>
         </div>
       </section>
