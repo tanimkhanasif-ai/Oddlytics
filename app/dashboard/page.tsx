@@ -6,19 +6,18 @@ import type { ComponentType } from "react";
 import AppTopbar from "@/components/AppTopbar";
 
 const BADGE_COLORS: Record<string, string> = {
-  green: "border-brand/40 bg-brand/10 text-brand-bright",
-  amber: "border-amber-400/40 bg-amber-400/10 text-amber-300",
-  blue: "border-blue-400/40 bg-blue-400/10 text-blue-300",
-  purple: "border-purple-400/40 bg-purple-400/10 text-purple-300",
+  green: "bg-brand text-black shadow-[0_8px_24px_-8px_rgba(34,197,94,0.6)]",
+  amber: "bg-amber-500 text-black shadow-[0_8px_24px_-8px_rgba(245,158,11,0.6)]",
+  blue: "bg-blue-500 text-white shadow-[0_8px_24px_-8px_rgba(59,130,246,0.6)]",
+  purple: "bg-purple-500 text-white shadow-[0_8px_24px_-8px_rgba(168,85,247,0.6)]",
 };
 
 interface CardDef {
   href: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   color: keyof typeof BADGE_COLORS;
   titleGreen: string;
   titleWhite: string;
-  subtitle: string;
   body: string;
 }
 
@@ -29,7 +28,6 @@ const TOP_ROW: CardDef[] = [
     color: "green",
     titleGreen: "AI",
     titleWhite: "Predictor",
-    subtitle: "AI Market Predictor",
     body: "Upload a screenshot of any market and instantly get the winning pick to bet on.",
   },
   {
@@ -38,7 +36,6 @@ const TOP_ROW: CardDef[] = [
     color: "green",
     titleGreen: "Virtual",
     titleWhite: "Trading",
-    subtitle: "Virtual Trading",
     body: "Trade with virtual money and test strategies in real market conditions – zero risk.",
   },
 ];
@@ -50,7 +47,6 @@ const BOTTOM_ROW: CardDef[] = [
     color: "amber",
     titleGreen: "Handpicked",
     titleWhite: "Bets",
-    subtitle: "Handpicked Bets",
     body: "Fresh, high-conviction picks from our AI every day to help you win more.",
   },
   {
@@ -59,7 +55,6 @@ const BOTTOM_ROW: CardDef[] = [
     color: "blue",
     titleGreen: "Wallet",
     titleWhite: "Tracker",
-    subtitle: "Wallet Tracker",
     body: "Track the performance of your wallets in real time. Know what's working.",
   },
   {
@@ -68,36 +63,26 @@ const BOTTOM_ROW: CardDef[] = [
     color: "purple",
     titleGreen: "Copy",
     titleWhite: "Trading",
-    subtitle: "Copy Trading",
     body: "Automatically mirror top traders' moves in real time. Set your budget and relax.",
   },
 ];
 
-function FeatureCard({ href, icon: Icon, color, titleGreen, titleWhite, subtitle, body }: CardDef) {
+function FeatureCard({ href, icon: Icon, color, titleGreen, titleWhite, body }: CardDef) {
   return (
     <Link
       href={href}
-      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-white/20 hover:bg-white/[0.06]"
+      className="group rounded-2xl border border-white/10 bg-white/[0.03] p-7 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06]"
     >
-      <div
-        className="pointer-events-none absolute right-0 top-0 h-24 w-24 opacity-30"
-        style={{
-          backgroundImage: "radial-gradient(rgba(255,255,255,0.5) 1px, transparent 1px)",
-          backgroundSize: "12px 12px",
-        }}
-      />
-      <div className="relative flex items-center gap-3">
-        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border ${BADGE_COLORS[color]}`}>
-          <Icon className="h-5 w-5" />
+      <div className="flex items-center gap-4">
+        <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${BADGE_COLORS[color]}`}>
+          <Icon className="h-6 w-6" strokeWidth={2.3} />
         </span>
-        <h3 className="text-xl font-bold">
+        <h3 className="text-2xl font-extrabold tracking-tight">
           <span className="text-brand-bright">{titleGreen}</span>{" "}
           <span className="text-white">{titleWhite}</span>
         </h3>
       </div>
-      <div className="relative mt-4 h-px w-10 bg-brand/60" />
-      <p className="relative mt-3 text-sm font-semibold text-brand-bright">{subtitle}</p>
-      <p className="relative mt-1 text-sm text-gray-400">{body}</p>
+      <p className="mt-4 text-sm leading-relaxed text-gray-400">{body}</p>
     </Link>
   );
 }
