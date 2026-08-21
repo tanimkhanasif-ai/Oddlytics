@@ -42,7 +42,7 @@ NEXTAUTH_SECRET=...        # generate with: openssl rand -base64 32
 DATABASE_URL=...           # a Postgres connection string, e.g. from Neon (see below)
 ```
 
-`ANTHROPIC_API_KEY` and the `STRIPE_*` vars can stay empty — see "Demo mode" below.
+`ANTHROPIC_API_KEY` and the `PADDLE_*` vars can stay empty — see "Demo mode" below.
 
 ```bash
 npx prisma migrate deploy   # applies the committed migration in prisma/migrations/
@@ -64,20 +64,21 @@ log in → open/close a Paper Trading position → track a wallet → follow a C
 reset account data all worked correctly) — the only thing not tested live is Neon specifically,
 since this dev environment can't reach the public internet to create one.
 
-## Demo mode (current default)
+## Demo mode (falls back to this automatically)
 
-With no `ANTHROPIC_API_KEY` and no Stripe keys set:
+With no `ANTHROPIC_API_KEY` and no Paddle keys set:
 
 - `/api/analyze` and `/api/coach` return realistic **mocked** responses matching the real output
   schema, with a short artificial delay so it feels like a network call. Every mocked
   `AnalysisResult` is flagged with `_mock: true` and the UI shows a "Demo data" badge on it; the
   Coach panel shows a "Demo mode" note under its header once it's replied once.
-- The Handpicked Bets paywall uses a **mocked Stripe Checkout** (`/checkout/mock`) — a fake card
-  form that never charges anything and just flips a local "subscribed" flag on submit.
-- The nav bar shows a **Demo mode** / **Live** pill (from `GET /api/config`) so it's always
-  obvious which mode you're in.
+- The Handpicked Bets / Pricing paywall uses a **mocked checkout** (`/checkout/mock`) — a fake
+  card form that never charges anything and just flips your subscription flag on submit.
+- The Sidebar shows a **Demo mode** / **Live** pill (from `GET /api/config`, AI-key state only) so
+  it's always obvious which mode the AI features are in.
 
-Nothing above requires any keys. This is the state the app ships in.
+Each piece falls back independently — you can have real Paddle payments live while AI stays
+mocked, or vice versa.
 
 ## Connecting real data — step by step
 
@@ -95,31 +96,40 @@ Nothing above requires any keys. This is the state the app ships in.
 4. Optional: override `ANALYSIS_MODEL` / `COACH_MODEL` in `.env.local` if you want a different
    model than the default (`claude-sonnet-5`).
 
-### 2. Stripe (Handpicked Bets paywall)
+### 2. Paddle (Handpicked Bets + Pricing paywall)
 
-1. Create a Stripe account (test mode is fine to start) and a recurring **Price** for the
-   Handpicked Bets subscription.
+Paddle Billing's checkout model is different from Stripe's: instead of the server creating a
+redirect session, **Paddle.js** opens an in-page overlay checkout directly from the browser
+(`Paddle.Checkout.open(...)`, via the `@paddle/paddle-js` package) — there's no redirect for the
+real path.
+
+1. Create a Paddle account and a Product + Price for the subscription. **Start in sandbox** —
+   Paddle's sandbox is a fully separate environment from production with its own keys/prices.
 2. In `.env.local`, set:
    ```
-   STRIPE_SECRET_KEY=sk_test_...
-   STRIPE_PRICE_ID=price_...
+   NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=...   # client-side token, safe to expose in the browser
+   NEXT_PUBLIC_PADDLE_PRICE_ID=...
+   NEXT_PUBLIC_PADDLE_ENV=sandbox        # or "production"
    ```
-3. Restart the app. `app/api/stripe/create-checkout-session/route.ts` and
-   `app/api/stripe/verify-session/route.ts` both check for these and switch from the mocked
-   checkout to a real Stripe Checkout Session automatically (again, look for the `// TODO: real
-   Stripe Checkout Session` comments — the code is already there).
-4. To enable the webhook (`app/api/stripe/webhook/route.ts`), also set:
+   This alone is enough to switch the Pricing/Handpicked Bets buttons from the mocked checkout to
+   the real overlay (`lib/hooks/usePaddleCheckout.ts` checks these are set — no code changes
+   needed). After the overlay reports `checkout.completed`, the page polls `GET /api/subscription`
+   for a few seconds waiting for the webhook below to land, since there's no redirect to carry a
+   "success" signal back.
+3. To make the webhook actually persist the subscription, also get a server API key and set:
    ```
-   STRIPE_WEBHOOK_SECRET=whsec_...
+   PADDLE_API_KEY=...
+   PADDLE_WEBHOOK_SECRET=...
    ```
-   and point a Stripe webhook endpoint at `POST /api/stripe/webhook` (use `stripe listen --forward-to
-   localhost:3000/api/stripe/webhook` locally).
-5. Now that there's a real `User` table, the webhook actually persists subscription state:
-   checkout session creation sets `client_reference_id` to the logged-in user's id, and on
-   `checkout.session.completed` the webhook writes `subscribed: true` (and stores
-   `stripeCustomerId`) onto that user; `customer.subscription.deleted` flips it back off by looking
-   up the user via `stripeCustomerId`. This closes the gap that existed before accounts/DB were
-   added.
+   then point a Paddle notification destination at `POST /api/paddle/webhook` (Paddle's dashboard
+   → Developer Tools → Notifications) and paste its signing secret into `PADDLE_WEBHOOK_SECRET`.
+4. `app/api/paddle/webhook/route.ts` verifies the signature (`paddle.webhooks.unmarshal`), and on
+   `subscription.activated` reads `customData.userId` (passed into `Checkout.open()` when the
+   button was clicked) to set `subscribed: true` + store `paddleCustomerId` on that user;
+   `subscription.canceled` / `subscription.past_due` flip it back off by looking the user up via
+   `paddleCustomerId`.
+5. Only switch `NEXT_PUBLIC_PADDLE_ENV` to `production` (with production keys/price) after a
+   sandbox checkout has been verified working end-to-end.
 
 ### 3. Market data (already live, no keys needed)
 
@@ -160,7 +170,7 @@ app/
   wallet-tracker/page.tsx           real Polymarket leaderboard + per-wallet trade history
   copy-trading/page.tsx             follow real traders, auto-mirror into Paper Trading
   settings/page.tsx                 account state, reset account data, log out
-  checkout/mock/page.tsx            fake Stripe Checkout UI for test-mode flow (app chrome-free)
+  checkout/mock/page.tsx            fake checkout UI for the test-mode fallback flow (app chrome-free)
   api/auth/[...nextauth]/route.ts   NextAuth (login/session/logout)
   api/auth/register/route.ts        creates a user (bcrypt-hashed password)
   api/analyze/route.ts              mock-or-real Analysis Engine call (ANTHROPIC_API_KEY-gated)
@@ -175,10 +185,8 @@ app/
   api/analysis-history/route.ts     DB-backed recent-analyses list
   api/subscription/route.ts         DB-backed paywall state
   api/account/route.ts              display name + account-data reset
-  api/config/route.ts               exposes aiEnabled/stripeEnabled flags to the client
-  api/stripe/create-checkout-session/route.ts   mock-or-real Stripe Checkout session (auth required)
-  api/stripe/verify-session/route.ts            mock-or-real payment verification
-  api/stripe/webhook/route.ts                   real webhook, persists subscription to the DB
+  api/config/route.ts               exposes aiEnabled/paddleEnabled flags to the client
+  api/paddle/webhook/route.ts       real Paddle webhook, persists subscription to the DB (PADDLE_*-gated)
 components/
   AppChrome.tsx                     picks marketing topnav vs. app sidebar vs. bare (checkout/login/signup) per route
   AuthProvider.tsx                  wraps the app in NextAuth's SessionProvider
@@ -189,8 +197,7 @@ components/
 lib/
   prompts.ts                        the two system prompts, verbatim
   types.ts                          shared TypeScript types
-  promo.ts                          persisted (non-resetting) offer countdown deadline
-  anthropic.ts / stripe.ts          API client getters
+  anthropic.ts / paddle.ts          API client getters
   auth.ts                           NextAuth config (credentials provider, JWT sessions)
   session.ts                        requireUserId() helper for route handlers
   prisma.ts                         Prisma client singleton
@@ -208,6 +215,7 @@ lib/
   hooks/useTrackedWallets.ts        fetches /api/wallets
   hooks/useCopyTrading.ts           fetches /api/copy-trading
   hooks/useSettings.ts              fetches /api/account (display name)
+  hooks/usePaddleCheckout.ts        loads Paddle.js + opens the real overlay checkout (falls back to /checkout/mock when unconfigured)
 prisma/
   schema.prisma                     User, PaperPosition, TrackedWallet, CopyFollow, MirroredTrade, AnalysisRecord
   migrations/                       committed migration SQL — run with `prisma migrate deploy`
@@ -224,25 +232,35 @@ middleware.ts                       redirects unauthenticated visitors to /login
 | `ANTHROPIC_API_KEY`      | no       | unset (mocked)       | Real AI Analyzer + AI Coach       |
 | `ANALYSIS_MODEL`         | no       | `claude-sonnet-5`    | —                                  |
 | `COACH_MODEL`            | no       | `claude-sonnet-5`    | —                                  |
-| `STRIPE_SECRET_KEY`      | no       | unset (mocked)       | Real Stripe Checkout               |
-| `STRIPE_PRICE_ID`        | no       | unset (mocked)       | Real Stripe Checkout               |
-| `STRIPE_WEBHOOK_SECRET`  | no       | unset (disabled)     | Stripe webhook signature checking |
+| `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` | no | unset (mocked)  | Real Paddle.js overlay checkout    |
+| `NEXT_PUBLIC_PADDLE_PRICE_ID`     | no | unset (mocked)  | Real Paddle.js overlay checkout    |
+| `NEXT_PUBLIC_PADDLE_ENV`          | no | `sandbox`       | `sandbox` or `production`          |
+| `PADDLE_API_KEY`         | no       | unset (webhook disabled) | Webhook signature verification |
+| `PADDLE_WEBHOOK_SECRET`  | no       | unset (webhook disabled) | Webhook signature verification |
 
-## Payment provider
+## Deploying to Vercel
 
-Checkout is currently scaffolded for Stripe specifically (`lib/stripe.ts`, the `stripe` npm
-package, `STRIPE_*` env vars) but stays fully mocked either way. If you end up using a different
-provider (Paddle, LemonSqueezy, etc.) instead of Stripe, the Stripe-specific pieces are isolated to
-`lib/stripe.ts` and the three `app/api/stripe/*` route files — swap those out and the rest of the
-app (Pricing page, `/checkout/mock`, `useSubscription`) doesn't need to change, since they only
-know about `POST /api/stripe/create-checkout-session` returning `{ url }` and
-`GET /api/stripe/verify-session` returning `{ paid }`, not Stripe specifics.
+1. Import this repo into Vercel (github.com login is easiest). Deploy `main` — Vercel treats the
+   branch it deploys as Production.
+2. Set env vars in Project Settings → Environment Variables (Production + Preview):
+   `DATABASE_URL` (Neon connection string), a freshly generated `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
+   set to the real deployed URL, `ANTHROPIC_API_KEY`, and the `PADDLE_*` vars (see above) once
+   you've created a Paddle product.
+3. `package.json`'s `build` script is `prisma migrate deploy && next build` — every deploy applies
+   any new migrations under `prisma/migrations/` automatically before building, so there's no
+   manual migration step on Vercel. (This does mean the build fails fast if `DATABASE_URL` isn't
+   set — that's intentional for a real deploy.)
+4. Once the real domain exists, register `https://<your-domain>/api/paddle/webhook` as a Paddle
+   notification destination and set `PADDLE_WEBHOOK_SECRET` from the value Paddle gives you, then
+   redeploy (env var changes need a new deploy to take effect).
+5. Verify: sign up, run a real AI Analyzer query, run a sandbox Paddle checkout, and confirm
+   `/settings` shows the subscription as active once the webhook lands.
 
 ## Persistence
 
 Accounts, Paper Trading positions/cash, subscription status, tracked wallets, Copy Trading follows
 and their mirrored-trade feed, and analysis history are all real Postgres rows scoped to the
-logged-in user (see `prisma/schema.prisma`), not browser storage. State now syncs across devices
-and survives clearing site data — the only thing still stored client-side is the Urgency Banner's
-countdown deadline (`lib/promo.ts`, `localStorage`), which is intentionally anonymous/per-browser
-since it's just marketing chrome, not user data.
+logged-in user (see `prisma/schema.prisma`), not browser storage. State syncs across devices and
+survives clearing site data. The only client-only state left is the landing page's session-scoped
+"dismissed" flags for the urgency banner and exit-intent modal (`sessionStorage`) — cosmetic, not
+user data.

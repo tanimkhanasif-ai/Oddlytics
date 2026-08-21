@@ -1,50 +1,47 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import { useSubscription } from "@/lib/hooks/useSubscription";
+import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
 import { getHandpickedBets } from "@/lib/mocks/handpicks";
 
-function HandpickedBetsInner() {
-  const { subscribed, hydrated, activate } = useSubscription();
-  const params = useSearchParams();
+/** Polls /api/subscription for up to ~10s waiting for the Paddle webhook to land. */
+async function waitForSubscription(refresh: () => Promise<boolean>) {
+  for (let i = 0; i < 7; i++) {
+    if (await refresh()) return true;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  return false;
+}
+
+export default function HandpickedBetsPage() {
+  const { data: session } = useSession();
+  const { subscribed, hydrated, refresh } = useSubscription();
   const router = useRouter();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
-  const checkoutState = params.get("checkout");
-  const sessionId = params.get("session_id");
+  const { openCheckout } = usePaddleCheckout(async () => {
+    setVerifying(true);
+    await waitForSubscription(refresh);
+    setVerifying(false);
+  });
 
-  useEffect(() => {
-    if (checkoutState === "success" && sessionId) {
-      setVerifying(true);
-      fetch(`/api/stripe/verify-session?session_id=${sessionId}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.paid) activate();
-        })
-        .finally(() => {
-          setVerifying(false);
-          router.replace("/handpicked-bets");
-        });
+  function startCheckout() {
+    if (!session?.user?.id) {
+      router.push("/login?callbackUrl=/handpicked-bets");
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkoutState, sessionId]);
-
-  async function startCheckout() {
-    setCheckoutLoading(true);
-    try {
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "handpicked" }),
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-    } finally {
+    if (paddleConfigured) {
+      setCheckoutLoading(true);
+      const opened = openCheckout(session.user.id);
       setCheckoutLoading(false);
+      if (opened) return;
     }
+    router.push("/checkout/mock?redirect=/handpicked-bets");
   }
 
   const bets = getHandpickedBets();
@@ -61,9 +58,6 @@ function HandpickedBetsInner() {
       </div>
 
       {verifying && <p className="text-sm text-gray-400">Confirming your subscription…</p>}
-      {checkoutState === "cancelled" && (
-        <p className="text-sm text-gray-400">Checkout was cancelled — no charge was made.</p>
-      )}
 
       {subscribed ? (
         <div className="grid gap-4">
@@ -85,13 +79,15 @@ function HandpickedBetsInner() {
             </p>
             <button
               onClick={startCheckout}
-              disabled={checkoutLoading}
+              disabled={checkoutLoading || verifying}
               className="mt-4 rounded-lg bg-white px-5 py-2.5 text-sm font-medium text-black disabled:opacity-50"
             >
-              {checkoutLoading ? "Redirecting…" : "Unlock Handpicked Bets"}
+              {checkoutLoading ? "Opening checkout…" : "Unlock Handpicked Bets"}
             </button>
             <p className="mt-2 text-xs text-gray-500">
-              Test mode — no Stripe keys configured yet, nothing will be charged.
+              {paddleConfigured
+                ? "Secure checkout via Paddle."
+                : "Test mode — no payment provider configured yet, nothing will be charged."}
             </p>
           </div>
           <div className="pointer-events-none grid gap-4 opacity-40 blur-sm select-none">
@@ -102,13 +98,5 @@ function HandpickedBetsInner() {
         </div>
       )}
     </div>
-  );
-}
-
-export default function HandpickedBetsPage() {
-  return (
-    <Suspense fallback={null}>
-      <HandpickedBetsInner />
-    </Suspense>
   );
 }

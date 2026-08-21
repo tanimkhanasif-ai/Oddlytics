@@ -6,14 +6,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 function MockCheckoutInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const sessionId = params.get("session_id") || "mock_session";
+  const redirectTo = params.get("redirect") || "/handpicked-bets";
   const [loading, setLoading] = useState(false);
 
-  function pay() {
+  async function pay() {
     setLoading(true);
-    setTimeout(() => {
-      router.push(`/handpicked-bets?checkout=success&session_id=${sessionId}`);
-    }, 900);
+    try {
+      await fetch("/api/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscribed: true }),
+      });
+    } finally {
+      router.push(redirectTo);
+    }
   }
 
   return (
@@ -21,8 +27,9 @@ function MockCheckoutInner() {
       <div className="mx-auto grid max-w-4xl gap-10 px-6 py-16 sm:grid-cols-2">
         <div>
           <p className="rounded-md bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700">
-            TEST MODE — this is a mocked checkout page. No real payment is processed, and no
-            payment provider is connected yet.
+            TEST MODE — this is a mocked checkout page. No real payment is processed. Set
+            NEXT_PUBLIC_PADDLE_CLIENT_TOKEN / NEXT_PUBLIC_PADDLE_PRICE_ID to use real Paddle
+            checkout instead.
           </p>
           <div className="mt-8 flex items-center gap-2">
             <span className="grid h-6 w-6 place-items-center rounded bg-gray-900 text-xs font-bold text-white">
@@ -47,18 +54,6 @@ function MockCheckoutInner() {
         </div>
 
         <div>
-          <button
-            disabled
-            className="w-full cursor-not-allowed rounded-lg bg-gray-900 py-3 text-sm font-medium text-white opacity-60"
-          >
-            Google Pay (disabled in test mode)
-          </button>
-          <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
-            <div className="h-px flex-1 bg-gray-200" />
-            OR PAY ANOTHER WAY
-            <div className="h-px flex-1 bg-gray-200" />
-          </div>
-
           <label className="text-xs font-medium text-gray-600">Email</label>
           <div className="mt-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
             you@example.com
@@ -92,7 +87,7 @@ function MockCheckoutInner() {
             {loading ? "Processing…" : "Pay $1.00 (test mode)"}
           </button>
           <button
-            onClick={() => router.push("/handpicked-bets?checkout=cancelled")}
+            onClick={() => router.push(redirectTo)}
             className="mt-2 w-full py-2 text-xs text-gray-400 hover:text-gray-700"
           >
             Cancel

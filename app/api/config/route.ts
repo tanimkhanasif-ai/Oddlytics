@@ -6,6 +6,6 @@ export const runtime = "nodejs";
 export async function GET() {
   return NextResponse.json({
     aiEnabled: !!process.env.ANTHROPIC_API_KEY,
-    stripeEnabled: !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID),
+    paddleEnabled: !!(process.env.PADDLE_API_KEY && process.env.PADDLE_WEBHOOK_SECRET),
   });
 }

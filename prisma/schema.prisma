@@ -16,7 +16,7 @@ model User {
 
   cashUsd          Float    @default(1000)
   subscribed       Boolean  @default(false)
-  stripeCustomerId String?  @unique
+  paddleCustomerId String?  @unique
 
   positions      PaperPosition[]
   trackedWallets TrackedWallet[]

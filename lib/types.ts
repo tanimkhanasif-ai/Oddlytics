@@ -65,7 +65,7 @@ export interface HandpickedBet {
 
 export interface AppConfig {
   aiEnabled: boolean;
-  stripeEnabled: boolean;
+  paddleEnabled: boolean;
 }
 
 export interface TopTrader {

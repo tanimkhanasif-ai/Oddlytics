@@ -8,15 +8,21 @@ export function useSubscription() {
   const [subscribed, setSubscribed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
+  const refresh = useCallback(async (): Promise<boolean> => {
+    const res = await fetch("/api/subscription");
+    const data = await res.json();
+    const next = !!data.subscribed;
+    setSubscribed(next);
+    return next;
+  }, []);
+
   useEffect(() => {
     if (status === "authenticated") {
-      fetch("/api/subscription")
-        .then((r) => r.json())
-        .then((data) => setSubscribed(!!data.subscribed))
-        .finally(() => setHydrated(true));
+      refresh().finally(() => setHydrated(true));
     } else if (status === "unauthenticated") {
       setHydrated(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   const activate = useCallback(async () => {
@@ -37,5 +43,5 @@ export function useSubscription() {
     setSubscribed(false);
   }, []);
 
-  return { subscribed, hydrated, activate, deactivate };
+  return { subscribed, hydrated, activate, deactivate, refresh };
 }

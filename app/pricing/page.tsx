@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import FaqAccordion from "@/components/FaqAccordion";
 import { useSubscription } from "@/lib/hooks/useSubscription";
+import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
 
 const FEATURES = [
   "Unlimited AI Analyzer runs",
@@ -15,28 +17,41 @@ const FEATURES = [
   "Copy Trading — mirror real traders into Paper Trading",
 ];
 
+/** Polls /api/subscription for up to ~10s waiting for the Paddle webhook to land. */
+async function waitForSubscription(refresh: () => Promise<boolean>) {
+  for (let i = 0; i < 7; i++) {
+    if (await refresh()) return true;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  return false;
+}
+
 export default function PricingPage() {
-  const { subscribed, hydrated } = useSubscription();
+  const { data: session } = useSession();
+  const { subscribed, hydrated, refresh } = useSubscription();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
-  async function startCheckout() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "all-access" }),
-      });
-      if (res.status === 401) {
-        router.push("/login?callbackUrl=/pricing");
-        return;
-      }
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-    } finally {
-      setLoading(false);
+  const { openCheckout } = usePaddleCheckout(async () => {
+    setVerifying(true);
+    await waitForSubscription(refresh);
+    setVerifying(false);
+  });
+
+  function startCheckout() {
+    if (!session?.user?.id) {
+      router.push("/login?callbackUrl=/pricing");
+      return;
     }
+    if (paddleConfigured) {
+      setLoading(true);
+      const opened = openCheckout(session.user.id);
+      setLoading(false);
+      if (opened) return;
+    }
+    // Fallback: no Paddle keys configured yet — mocked test-mode checkout.
+    router.push("/checkout/mock?redirect=/pricing");
   }
 
   return (
@@ -61,19 +76,19 @@ export default function PricingPage() {
 
         {hydrated && subscribed ? (
           <div className="mt-6 rounded-lg bg-yes/10 px-4 py-3 text-center text-sm text-yes">
-            You're already on All-Access (test mode).
+            You're already on All-Access.
           </div>
         ) : (
           <button
             onClick={startCheckout}
-            disabled={loading || !hydrated}
+            disabled={loading || verifying || !hydrated}
             className="mt-6 w-full rounded-lg bg-white px-4 py-3 text-sm font-medium text-black hover:bg-gray-200 disabled:opacity-50"
           >
-            {loading ? "Redirecting…" : "Try Oddlytics for $1"}
+            {verifying ? "Confirming your subscription…" : loading ? "Opening checkout…" : "Try Oddlytics for $1"}
           </button>
         )}
         <p className="mt-2 text-center text-xs text-gray-500">
-          Test mode — no payment provider connected yet.
+          {paddleConfigured ? "Secure checkout via Paddle." : "Test mode — no payment provider connected yet."}
         </p>
 
         <ul className="mt-6 space-y-2 text-sm text-gray-300">
