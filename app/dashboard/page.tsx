@@ -1,177 +1,153 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { useAnalysisHistory } from "@/lib/hooks/useAnalysisHistory";
-import { useAppConfig } from "@/lib/hooks/useAppConfig";
-import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
-import { useSubscription } from "@/lib/hooks/useSubscription";
-import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
-import { formatUsd, truncate } from "@/lib/utils";
+import { BadgeCheck, Bookmark, Monitor, Sparkles, Star, Users, Wallet } from "lucide-react";
+import type { ComponentType } from "react";
+import AppTopbar from "@/components/AppTopbar";
+
+const BADGE_COLORS: Record<string, string> = {
+  green: "border-brand/40 bg-brand/10 text-brand-bright",
+  amber: "border-amber-400/40 bg-amber-400/10 text-amber-300",
+  blue: "border-blue-400/40 bg-blue-400/10 text-blue-300",
+  purple: "border-purple-400/40 bg-purple-400/10 text-purple-300",
+};
+
+interface CardDef {
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  color: keyof typeof BADGE_COLORS;
+  titleGreen: string;
+  titleWhite: string;
+  subtitle: string;
+  body: string;
+}
+
+const TOP_ROW: CardDef[] = [
+  {
+    href: "/analyzer",
+    icon: Sparkles,
+    color: "green",
+    titleGreen: "AI",
+    titleWhite: "Predictor",
+    subtitle: "AI Market Predictor",
+    body: "Upload a screenshot of any market and instantly get the winning pick to bet on.",
+  },
+  {
+    href: "/paper-trading",
+    icon: Monitor,
+    color: "green",
+    titleGreen: "Virtual",
+    titleWhite: "Trading",
+    subtitle: "Virtual Trading",
+    body: "Trade with virtual money and test strategies in real market conditions – zero risk.",
+  },
+];
+
+const BOTTOM_ROW: CardDef[] = [
+  {
+    href: "/handpicked-bets",
+    icon: Bookmark,
+    color: "amber",
+    titleGreen: "Handpicked",
+    titleWhite: "Bets",
+    subtitle: "Handpicked Bets",
+    body: "Fresh, high-conviction picks from our AI every day to help you win more.",
+  },
+  {
+    href: "/wallet-tracker",
+    icon: Wallet,
+    color: "blue",
+    titleGreen: "Wallet",
+    titleWhite: "Tracker",
+    subtitle: "Wallet Tracker",
+    body: "Track the performance of your wallets in real time. Know what's working.",
+  },
+  {
+    href: "/copy-trading",
+    icon: Users,
+    color: "purple",
+    titleGreen: "Copy",
+    titleWhite: "Trading",
+    subtitle: "Copy Trading",
+    body: "Automatically mirror top traders' moves in real time. Set your budget and relax.",
+  },
+];
+
+function FeatureCard({ href, icon: Icon, color, titleGreen, titleWhite, subtitle, body }: CardDef) {
+  return (
+    <Link
+      href={href}
+      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-white/20 hover:bg-white/[0.06]"
+    >
+      <div
+        className="pointer-events-none absolute right-0 top-0 h-24 w-24 opacity-30"
+        style={{
+          backgroundImage: "radial-gradient(rgba(255,255,255,0.5) 1px, transparent 1px)",
+          backgroundSize: "12px 12px",
+        }}
+      />
+      <div className="relative flex items-center gap-3">
+        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border ${BADGE_COLORS[color]}`}>
+          <Icon className="h-5 w-5" />
+        </span>
+        <h3 className="text-xl font-bold">
+          <span className="text-brand-bright">{titleGreen}</span>{" "}
+          <span className="text-white">{titleWhite}</span>
+        </h3>
+      </div>
+      <div className="relative mt-4 h-px w-10 bg-brand/60" />
+      <p className="relative mt-3 text-sm font-semibold text-brand-bright">{subtitle}</p>
+      <p className="relative mt-1 text-sm text-gray-400">{body}</p>
+    </Link>
+  );
+}
 
 export default function DashboardPage() {
-  const config = useAppConfig();
-  const { cashUsd, positions, hydrated: paperHydrated } = usePaperTrading();
-  const { subscribed, hydrated: subHydrated } = useSubscription();
-  const { history, hydrated: historyHydrated } = useAnalysisHistory();
-
-  const openPositions = positions.filter((p) => p.status === "open");
-
-  const unrealizedPnl = useMemo(() => {
-    return openPositions.reduce((sum, p) => {
-      const current = simulateCurrentPrice(p.id, p.entryPrice, p.openedAt);
-      const shares = p.sizeUsd / p.entryPrice;
-      return sum + (shares * current - p.sizeUsd);
-    }, 0);
-  }, [openPositions]);
-
-  const hydrated = paperHydrated && subHydrated && historyHydrated;
-  if (!hydrated) return null;
-
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-400">
-          {config && !config.aiEnabled
-            ? "Running in demo mode — AI Analyzer and AI Coach responses are mocked until ANTHROPIC_API_KEY is connected."
-            : "Your Oddlytics overview."}
-        </p>
-      </div>
-
+    <div className="space-y-4">
+      <AppTopbar />
       <div className="grid gap-4 sm:grid-cols-2">
-        <FeatureCard
-          href="/analyzer"
-          title="AI Analyzer"
-          body="Upload a screenshot or paste a market link and get a structured pick."
-        />
-        <FeatureCard
-          href="/paper-trading"
-          title="Paper Trading"
-          body="Trade with virtual money and test strategies without any risk."
-        />
+        {TOP_ROW.map((card) => (
+          <FeatureCard key={card.href} {...card} />
+        ))}
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <FeatureCard
-          href="/handpicked-bets"
-          title="Handpicked Bets"
-          body="Curated picks, refreshed regularly."
-          compact
-        />
-        <FeatureCard
-          href="/wallet-tracker"
-          title="Wallet Tracker"
-          body="Real top Polymarket traders, live."
-          compact
-        />
-        <FeatureCard
-          href="/copy-trading"
-          title="Copy Trading"
-          body="Mirror real traders into Paper Trading."
-          compact
-        />
+        {BOTTOM_ROW.map((card) => (
+          <FeatureCard key={card.href} {...card} />
+        ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Virtual cash" value={formatUsd(cashUsd)} href="/paper-trading" />
-        <StatCard label="Open positions" value={String(openPositions.length)} href="/paper-trading" />
-        <StatCard
-          label="Unrealized P&L"
-          value={formatUsd(unrealizedPnl)}
-          tone={unrealizedPnl >= 0 ? "yes" : "no"}
-          href="/paper-trading"
-        />
-        <StatCard
-          label="Handpicked Bets"
-          value={subscribed ? "Unlocked" : "Locked"}
-          tone={subscribed ? "yes" : undefined}
-          href="/handpicked-bets"
-        />
-      </div>
-
-      <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Recent analyses
-        </h2>
-        {history.length === 0 ? (
-          <p className="mt-3 text-sm text-gray-500">
-            No analyses yet — <Link href="/analyzer" className="underline">run one</Link> to see it
-            here.
-          </p>
-        ) : (
-          <div className="mt-3 space-y-2">
-            {history.map((r, i) => (
-              <div
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center sm:flex-row sm:justify-between sm:text-left">
+        <div className="flex items-center gap-3">
+          <div className="flex -space-x-2">
+            {[0, 1, 2].map((i) => (
+              <span
                 key={i}
-                className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-black/20 p-3"
-              >
-                <p className="truncate text-sm text-gray-300">{truncate(r.market_question, 80)}</p>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    r.recommendation === "YES" ? "bg-yes/15 text-yes" : "bg-no/15 text-no"
-                  }`}
-                >
-                  {r.recommendation} · {r.confidence_pct}%
-                </span>
-              </div>
+                className="h-8 w-8 rounded-full border-2 border-black bg-gradient-to-br from-brand to-brand-dark"
+              />
             ))}
           </div>
-        )}
+          <p className="text-sm text-gray-200">
+            <span className="font-semibold text-white">$3,261,863+</span> won by people like you
+          </p>
+          <BadgeCheck className="h-4 w-4 text-blue-400" />
+        </div>
+        <div className="text-sm text-gray-300">
+          <span className="inline-flex items-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star key={i} className="h-3.5 w-3.5 fill-brand text-brand" />
+            ))}
+            <span className="ml-1 font-semibold text-white">4.9/5</span>
+          </span>
+          <span className="mx-2 text-gray-600">|</span>
+          <span className="inline-flex items-center gap-1">
+            <BadgeCheck className="h-4 w-4 text-brand-bright" /> verified by Proof
+          </span>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function FeatureCard({
-  href,
-  title,
-  body,
-  compact,
-}: {
-  href: string;
-  title: string;
-  body: string;
-  compact?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`rounded-xl border border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 ${
-        compact ? "p-4" : "p-6"
-      }`}
-    >
-      <h3 className={compact ? "text-base font-semibold text-white" : "text-xl font-semibold text-white"}>
-        {title}
-      </h3>
-      <p className="mt-1 text-sm text-gray-400">{body}</p>
-    </Link>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-  href,
-}: {
-  label: string;
-  value: string;
-  tone?: "yes" | "no";
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="rounded-xl border border-white/10 bg-white/5 p-4 hover:border-white/20 hover:bg-white/10"
-    >
-      <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-      <p
-        className={`mt-1 text-lg font-semibold ${
-          tone === "yes" ? "text-yes" : tone === "no" ? "text-no" : "text-white"
-        }`}
-      >
-        {value}
+      <p className="text-center text-xs italic text-gray-600 sm:text-left">
+        *Works with Kalshi, Polymarket and more. Oddlytics never touches your money or wallet.*
       </p>
-    </Link>
+    </div>
   );
 }

@@ -1,128 +1,180 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Monitor, Star, TrendingUp } from "lucide-react";
+import AppTopbar from "@/components/AppTopbar";
+import LockedOverlay from "@/components/LockedOverlay";
+import Sparkline from "@/components/Sparkline";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
+import { useSubscription } from "@/lib/hooks/useSubscription";
+import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
+import type { TrendingMarket } from "@/lib/markets/topMarkets";
 import type { PaperPosition, Platform } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
 
 export default function PaperTradingPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const { subscribed, hydrated: subHydrated, refresh } = useSubscription();
   const { cashUsd, positions, hydrated, openPosition, closePosition, reset } = usePaperTrading();
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  const [markets, setMarkets] = useState<TrendingMarket[]>([]);
+  const [prefill, setPrefill] = useState<{ question: string; platform: Platform; price: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/markets/trending?limit=6")
+      .then((r) => r.json())
+      .then((data) => setMarkets(data.markets ?? []))
+      .catch(() => setMarkets([]));
+  }, []);
+
+  const { openCheckout } = usePaddleCheckout(refresh);
+
+  function startCheckout() {
+    if (!session?.user?.id) {
+      router.push("/login?callbackUrl=/paper-trading");
+      return;
+    }
+    if (paddleConfigured) {
+      setCheckoutLoading(true);
+      const opened = openCheckout(session.user.id);
+      setCheckoutLoading(false);
+      if (opened) return;
+    }
+    router.push("/checkout/mock?redirect=/paper-trading");
+  }
 
   const openPositions = positions.filter((p) => p.status === "open");
   const closedPositions = positions.filter((p) => p.status === "closed");
 
-  const { positionsValue, unrealizedPnl } = useMemo(() => {
-    let value = 0;
+  const { unrealizedPnl } = useMemo(() => {
     let pnl = 0;
     for (const p of openPositions) {
       const current = simulateCurrentPrice(p.id, p.entryPrice, p.openedAt);
       const shares = p.sizeUsd / p.entryPrice;
-      value += shares * current;
       pnl += shares * current - p.sizeUsd;
     }
-    return { positionsValue: value, unrealizedPnl: pnl };
+    return { unrealizedPnl: pnl };
   }, [openPositions]);
 
-  const realizedPnl = closedPositions.reduce((sum, p) => {
-    if (p.exitPrice == null) return sum;
-    const shares = p.sizeUsd / p.entryPrice;
-    return sum + (shares * p.exitPrice - p.sizeUsd);
-  }, 0);
-
-  if (!hydrated) return null;
+  if (!hydrated || !subHydrated) return null;
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Paper Trading</h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Virtual money only — nothing here is real. Prices for open positions are simulated,
-            not live.
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            if (confirm("Reset paper trading? This clears all positions and restores $1,000 virtual cash.")) {
-              reset();
-            }
-          }}
-          className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-gray-300 hover:bg-white/20"
-        >
-          Reset portfolio
-        </button>
-      </div>
+    <div className="space-y-6">
+      <AppTopbar title="Virtual Trading" icon={Monitor} />
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <StatCard label="Virtual cash" value={formatUsd(cashUsd)} />
-        <StatCard label="Open positions value" value={formatUsd(positionsValue)} />
-        <StatCard
-          label="Unrealized P&L"
-          value={formatUsd(unrealizedPnl)}
-          tone={unrealizedPnl >= 0 ? "yes" : "no"}
-        />
-        <StatCard
-          label="Realized P&L"
-          value={formatUsd(realizedPnl)}
-          tone={realizedPnl >= 0 ? "yes" : "no"}
-        />
-      </div>
-
-      <ManualOpenForm onOpen={openPosition} cashUsd={cashUsd} />
-
-      <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Open positions
-        </h2>
-        {openPositions.length === 0 ? (
-          <p className="mt-3 text-sm text-gray-500">
-            No open positions yet. Open one from an AI Analyzer result, or add one manually above.
-          </p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {openPositions.map((p) => (
-              <PositionRow key={p.id} position={p} onClose={closePosition} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {closedPositions.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Closed positions
-          </h2>
-          <div className="mt-3 space-y-3">
-            {closedPositions.map((p) => (
-              <PositionRow key={p.id} position={p} onClose={closePosition} />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "yes" | "no";
-}) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-      <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-      <p
-        className={`mt-1 text-lg font-semibold ${
-          tone === "yes" ? "text-yes" : tone === "no" ? "text-no" : "text-white"
-        }`}
+      <LockedOverlay
+        unlocked={subscribed}
+        loading={checkoutLoading}
+        onUnlock={startCheckout}
+        title="Unlock Virtual Trading"
+        subtitle={
+          paddleConfigured
+            ? "Practice with $100,000 in virtual cash — secure checkout via Paddle."
+            : "Practice with $100,000 in virtual cash. Test mode — no payment provider configured yet, nothing will be charged."
+        }
+        ctaLabel="Set up Virtual Trading"
       >
-        {value}
-      </p>
+        <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Balance</p>
+              <p className="mt-1 text-xl font-semibold text-white">{formatUsd(cashUsd)}</p>
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500">P&L</p>
+                <p className={`mt-1 text-xl font-semibold ${unrealizedPnl >= 0 ? "text-yes" : "text-no"}`}>
+                  {unrealizedPnl >= 0 ? "+" : ""}
+                  {formatUsd(unrealizedPnl)}
+                </p>
+              </div>
+              <TrendingUp className={`h-6 w-6 ${unrealizedPnl >= 0 ? "text-yes" : "text-no"}`} />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <ManualOpenForm onOpen={openPosition} cashUsd={cashUsd} prefill={prefill} onConsumePrefill={() => setPrefill(null)} />
+            <button
+              onClick={() => {
+                if (confirm("Reset Virtual Trading? This clears all positions and restores $100,000 virtual cash.")) {
+                  reset();
+                }
+              }}
+              className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-gray-300 hover:bg-white/20"
+            >
+              Reset portfolio
+            </button>
+          </div>
+
+          {markets.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+              <div className="flex items-center gap-2">
+                <Star className="h-4 w-4 text-brand-bright" />
+                <h2 className="text-sm font-semibold text-white">Practice popular markets</h2>
+              </div>
+              <p className="mt-0.5 text-xs text-gray-500">Test your strategies with virtual money</p>
+              <div className="mt-3 divide-y divide-white/5">
+                {markets.map((m) => {
+                  const price = (m.outcomes[0]?.pricePct ?? 50) / 100;
+                  return (
+                    <button
+                      key={`${m.platform}-${m.id}`}
+                      onClick={() =>
+                        setPrefill({ question: m.question, platform: m.platform, price: String(Math.round(price * 100)) })
+                      }
+                      className="flex w-full items-center justify-between gap-4 py-3 text-left hover:bg-white/[0.03]"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-gray-200">{m.question}</p>
+                        <p className="text-xs text-gray-500">
+                          {m.platform === "polymarket" ? "Polymarket" : "Kalshi"} · Vol. ${Math.round(m.volumeUsd / 1000)}K
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className={`text-sm font-semibold ${price >= 0.5 ? "text-yes" : "text-no"}`}>
+                          {Math.round(price * 100)}%
+                        </span>
+                        <Sparkline points={[price * 100, price * 100]} positive={price >= 0.5} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Open positions</h2>
+            {openPositions.length === 0 ? (
+              <p className="mt-3 text-sm text-gray-500">
+                No open positions yet. Open one from an AI Predictor result, or use Enter Trade above.
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {openPositions.map((p) => (
+                  <PositionRow key={p.id} position={p} onClose={closePosition} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {closedPositions.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Closed positions</h2>
+              <div className="mt-3 space-y-3">
+                {closedPositions.map((p) => (
+                  <PositionRow key={p.id} position={p} onClose={closePosition} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </LockedOverlay>
     </div>
   );
 }
@@ -159,9 +211,7 @@ function PositionRow({
         </div>
         <div className="text-right">
           <p className="text-xs text-gray-500">P&L</p>
-          <p className={`text-sm font-medium ${pnl >= 0 ? "text-yes" : "text-no"}`}>
-            {formatUsd(pnl)}
-          </p>
+          <p className={`text-sm font-medium ${pnl >= 0 ? "text-yes" : "text-no"}`}>{formatUsd(pnl)}</p>
         </div>
         {isOpen && (
           <button
@@ -179,9 +229,13 @@ function PositionRow({
 function ManualOpenForm({
   onOpen,
   cashUsd,
+  prefill,
+  onConsumePrefill,
 }: {
   onOpen: (p: Omit<PaperPosition, "id" | "openedAt" | "status">) => void;
   cashUsd: number;
+  prefill: { question: string; platform: Platform; price: string } | null;
+  onConsumePrefill: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [question, setQuestion] = useState("");
@@ -189,6 +243,17 @@ function ManualOpenForm({
   const [side, setSide] = useState<"YES" | "NO">("YES");
   const [entryCents, setEntryCents] = useState("50");
   const [size, setSize] = useState("25");
+
+  useEffect(() => {
+    if (prefill) {
+      setQuestion(prefill.question);
+      setPlatform(prefill.platform);
+      setEntryCents(prefill.price);
+      setExpanded(true);
+      onConsumePrefill();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
 
   function submit() {
     const entryPrice = Number(entryCents) / 100;
@@ -203,15 +268,15 @@ function ManualOpenForm({
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-white/20"
+        className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-gray-200 hover:bg-white/10"
       >
-        + Add a position manually
+        <span className="text-brand-bright">+</span> Enter Trade
       </button>
     );
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+    <div className="w-full rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="grid gap-3 sm:grid-cols-2">
         <input
           value={question}
@@ -252,16 +317,10 @@ function ManualOpenForm({
         />
       </div>
       <div className="mt-3 flex items-center gap-3">
-        <button
-          onClick={submit}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
-        >
+        <button onClick={submit} className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black">
           Open position
         </button>
-        <button
-          onClick={() => setExpanded(false)}
-          className="text-sm text-gray-500 hover:text-white"
-        >
+        <button onClick={() => setExpanded(false)} className="text-sm text-gray-500 hover:text-white">
           Cancel
         </button>
         <span className="text-xs text-gray-500">Available: {formatUsd(cashUsd)}</span>

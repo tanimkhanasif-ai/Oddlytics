@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchTopTraders, type LeaderboardPeriod } from "@/lib/markets/polymarketTraders";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,14 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(Number(req.nextUrl.searchParams.get("limit")) || 10, 25);
 
   try {
-    const traders = await fetchTopTraders(period, limit);
+    const raw = await fetchTopTraders(period, limit);
+    const counts = await prisma.copyFollow.groupBy({
+      by: ["walletAddress"],
+      where: { walletAddress: { in: raw.map((t) => t.walletAddress) } },
+      _count: { walletAddress: true },
+    });
+    const countByWallet = new Map(counts.map((c) => [c.walletAddress, c._count.walletAddress]));
+    const traders = raw.map((t) => ({ ...t, followerCount: countByWallet.get(t.walletAddress) ?? 0 }));
     return NextResponse.json({ traders });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to fetch leaderboard.";

@@ -16,7 +16,7 @@ export default function PricingTeaserCard() {
     <div className="w-full max-w-lg rounded-2xl border border-brand/30 bg-gradient-to-b from-brand-deep/40 to-black/40 p-6 sm:p-8">
       <div className="flex items-center justify-between gap-3">
         <span className="rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-medium text-gray-300">
-          One plan, everything unlocked
+          Trusted by <span className="font-semibold text-brand-bright">28k+</span> traders
         </span>
         <span className="rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-bright">
           One win pays for your whole month

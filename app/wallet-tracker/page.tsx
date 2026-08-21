@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Wallet } from "lucide-react";
+import AppTopbar from "@/components/AppTopbar";
+import LockedOverlay from "@/components/LockedOverlay";
 import { useTrackedWallets } from "@/lib/hooks/useTrackedWallets";
+import { useSubscription } from "@/lib/hooks/useSubscription";
+import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
 import type { TopTrader, TraderTrade } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
 
@@ -13,6 +20,11 @@ function truncateAddress(address: string): string {
 }
 
 export default function WalletTrackerPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const { subscribed, hydrated: subHydrated, refresh } = useSubscription();
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
   const [period, setPeriod] = useState<Period>("WEEK");
   const [traders, setTraders] = useState<TopTrader[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +32,22 @@ export default function WalletTrackerPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const { isTracked, track, untrack, hydrated } = useTrackedWallets();
+
+  const { openCheckout } = usePaddleCheckout(refresh);
+
+  function startCheckout() {
+    if (!session?.user?.id) {
+      router.push("/login?callbackUrl=/wallet-tracker");
+      return;
+    }
+    if (paddleConfigured) {
+      setCheckoutLoading(true);
+      const opened = openCheckout(session.user.id);
+      setCheckoutLoading(false);
+      if (opened) return;
+    }
+    router.push("/checkout/mock?redirect=/wallet-tracker");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -43,95 +71,111 @@ export default function WalletTrackerPage() {
     };
   }, [period]);
 
+  if (!subHydrated) return null;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Wallet Tracker</h1>
-        <p className="mt-1 text-sm text-gray-400">
-          Real Polymarket leaderboard data, pulled live from Polymarket's public Data API — not
-          mocked. Kalshi doesn't expose a public trader leaderboard, so this covers Polymarket
-          only.
-        </p>
-      </div>
+      <AppTopbar title="Wallet Tracker" icon={Wallet} />
 
-      <div className="flex gap-2">
-        {(["DAY", "WEEK", "MONTH", "ALL"] as Period[]).map((p) => (
-          <button
-            key={p}
-            onClick={() => setPeriod(p)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-              period === p ? "bg-white text-black" : "bg-white/10 text-gray-300 hover:bg-white/20"
-            }`}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
+      <LockedOverlay
+        unlocked={subscribed}
+        loading={checkoutLoading}
+        onUnlock={startCheckout}
+        title="Unlock Wallet Tracker"
+        subtitle={
+          paddleConfigured
+            ? "Real Polymarket leaderboard data, live — secure checkout via Paddle."
+            : "Real Polymarket leaderboard data, live. Test mode — no payment provider configured yet, nothing will be charged."
+        }
+        ctaLabel="Unlock Wallet Tracker"
+      >
+        <div className="space-y-6">
+          <p className="text-sm text-gray-400">
+            Real Polymarket leaderboard data, pulled live from Polymarket&apos;s public Data API — not
+            mocked. Kalshi doesn&apos;t expose a public trader leaderboard, so this covers Polymarket
+            only.
+          </p>
 
-      {loading && <p className="text-sm text-gray-500">Loading leaderboard…</p>}
-      {error && (
-        <p className="text-sm text-no">
-          {error} (This needs live network access to data-api.polymarket.com — some sandboxed
-          environments block it.)
-        </p>
-      )}
+          <div className="flex gap-2">
+            {(["DAY", "WEEK", "MONTH", "ALL"] as Period[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                  period === p ? "bg-white text-black" : "bg-white/10 text-gray-300 hover:bg-white/20"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
 
-      {!loading && !error && (
-        <div className="space-y-2">
-          {traders.map((t) => (
-            <div key={t.walletAddress} className="rounded-lg border border-white/10 bg-white/5">
-              <div className="flex items-center justify-between gap-4 p-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-6 shrink-0 text-sm text-gray-500">#{t.rank}</span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm text-gray-200">
-                      {t.name || truncateAddress(t.walletAddress)}
-                    </p>
-                    <p className="text-xs text-gray-500">{truncateAddress(t.walletAddress)}</p>
+          {loading && <p className="text-sm text-gray-500">Loading leaderboard…</p>}
+          {error && (
+            <p className="text-sm text-no">
+              {error} (This needs live network access to data-api.polymarket.com — some sandboxed
+              environments block it.)
+            </p>
+          )}
+
+          {!loading && !error && (
+            <div className="space-y-2">
+              {traders.map((t) => (
+                <div key={t.walletAddress} className="rounded-lg border border-white/10 bg-white/5">
+                  <div className="flex items-center justify-between gap-4 p-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-6 shrink-0 text-sm text-gray-500">#{t.rank}</span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-gray-200">
+                          {t.name || truncateAddress(t.walletAddress)}
+                        </p>
+                        <p className="text-xs text-gray-500">{truncateAddress(t.walletAddress)}</p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">P&L ({period.toLowerCase()})</p>
+                        <p className={`text-sm font-medium ${t.pnl >= 0 ? "text-yes" : "text-no"}`}>
+                          {formatUsd(t.pnl)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">Volume</p>
+                        <p className="text-sm text-gray-200">{formatUsd(t.volume)}</p>
+                      </div>
+                      <button
+                        onClick={() =>
+                          isTracked(t.walletAddress)
+                            ? untrack(t.walletAddress)
+                            : track(t.walletAddress, t.name)
+                        }
+                        disabled={!hydrated}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
+                          isTracked(t.walletAddress)
+                            ? "bg-white/10 text-gray-300 hover:bg-white/20"
+                            : "bg-white text-black"
+                        }`}
+                      >
+                        {isTracked(t.walletAddress) ? "Tracking" : "Track"}
+                      </button>
+                      <button
+                        onClick={() => setExpanded(expanded === t.walletAddress ? null : t.walletAddress)}
+                        className="text-xs text-gray-500 hover:text-white"
+                      >
+                        {expanded === t.walletAddress ? "Hide trades" : "View trades"}
+                      </button>
+                    </div>
                   </div>
+                  {expanded === t.walletAddress && <TraderTradesPanel address={t.walletAddress} />}
                 </div>
-                <div className="flex shrink-0 items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">P&L ({period.toLowerCase()})</p>
-                    <p className={`text-sm font-medium ${t.pnl >= 0 ? "text-yes" : "text-no"}`}>
-                      {formatUsd(t.pnl)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">Volume</p>
-                    <p className="text-sm text-gray-200">{formatUsd(t.volume)}</p>
-                  </div>
-                  <button
-                    onClick={() =>
-                      isTracked(t.walletAddress)
-                        ? untrack(t.walletAddress)
-                        : track(t.walletAddress, t.name)
-                    }
-                    disabled={!hydrated}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
-                      isTracked(t.walletAddress)
-                        ? "bg-white/10 text-gray-300 hover:bg-white/20"
-                        : "bg-white text-black"
-                    }`}
-                  >
-                    {isTracked(t.walletAddress) ? "Tracking" : "Track"}
-                  </button>
-                  <button
-                    onClick={() => setExpanded(expanded === t.walletAddress ? null : t.walletAddress)}
-                    className="text-xs text-gray-500 hover:text-white"
-                  >
-                    {expanded === t.walletAddress ? "Hide trades" : "View trades"}
-                  </button>
-                </div>
-              </div>
-              {expanded === t.walletAddress && <TraderTradesPanel address={t.walletAddress} />}
+              ))}
+              {traders.length === 0 && (
+                <p className="text-sm text-gray-500">No leaderboard data returned for this period.</p>
+              )}
             </div>
-          ))}
-          {traders.length === 0 && (
-            <p className="text-sm text-gray-500">No leaderboard data returned for this period.</p>
           )}
         </div>
-      )}
+      </LockedOverlay>
     </div>
   );
 }

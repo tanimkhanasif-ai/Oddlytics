@@ -41,11 +41,14 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="flex-1 px-6 py-8 sm:px-10">
-        <div className="mx-auto max-w-5xl">{children}</div>
-      </main>
+    <div className="min-h-screen">
+      <UrgencyBanner />
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <main className="flex-1 px-6 py-6 sm:px-10">
+          <div className="mx-auto max-w-5xl space-y-6">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

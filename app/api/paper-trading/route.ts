@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   if (body.action === "reset") {
     await prisma.$transaction([
       prisma.paperPosition.deleteMany({ where: { userId } }),
-      prisma.user.update({ where: { id: userId }, data: { cashUsd: 1000 } }),
+      prisma.user.update({ where: { id: userId }, data: { cashUsd: 100000 } }),
     ]);
     return NextResponse.json({ ok: true });
   }

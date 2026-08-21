@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest) {
       prisma.copyFollow.deleteMany({ where: { userId } }),
       prisma.mirroredTrade.deleteMany({ where: { userId } }),
       prisma.analysisRecord.deleteMany({ where: { userId } }),
-      prisma.user.update({ where: { id: userId }, data: { cashUsd: 1000, subscribed: false } }),
+      prisma.user.update({ where: { id: userId }, data: { cashUsd: 100000, subscribed: false } }),
     ]);
     return NextResponse.json({ ok: true });
   }

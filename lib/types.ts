@@ -74,6 +74,8 @@ export interface TopTrader {
   name: string | null;
   pnl: number;
   volume: number;
+  /** Real count of Oddlytics users currently following this trader via Copy Trading. */
+  followerCount: number;
 }
 
 export interface TraderTrade {

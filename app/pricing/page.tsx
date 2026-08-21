@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { BadgeCheck, Check, Star, TrendingUp } from "lucide-react";
 import FaqAccordion from "@/components/FaqAccordion";
 import { useSubscription } from "@/lib/hooks/useSubscription";
 import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
 
 const FEATURES = [
-  "Unlimited AI Analyzer runs",
-  "AI Coach",
-  "Paper Trading",
-  "Handpicked Bets — daily curated picks",
-  "Wallet Tracker — real Polymarket leaderboard",
-  "Copy Trading — mirror real traders into Paper Trading",
+  "Unlimited AI analysis on any market",
+  "Smart copy trading to follow top traders automatically",
+  "Daily high-conviction picks from our AI",
+  "Live wallet tracking of top-performing traders",
+  "Paper trading to refine your strategy risk-free",
+  "AI coaching to help you win more",
 ];
 
 /** Polls /api/subscription for up to ~10s waiting for the Paddle webhook to land. */
@@ -50,58 +50,80 @@ export default function PricingPage() {
       setLoading(false);
       if (opened) return;
     }
-    // Fallback: no Paddle keys configured yet — mocked test-mode checkout.
     router.push("/checkout/mock?redirect=/pricing");
   }
 
   return (
     <div className="mx-auto max-w-lg space-y-10">
-      <div className="text-center">
-        <h1 className="text-3xl font-semibold text-white">Simple pricing</h1>
-        <p className="mt-2 text-sm text-gray-400">
-          One plan, everything unlocked. Pricing shown below is a placeholder — nothing is charged
-          in test mode.
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <span className="rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-medium text-gray-300">
+          Trusted by <span className="font-semibold text-brand-bright">28k+</span> traders
+        </span>
+        <span className="rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-bright">
+          One win pays for your whole month
+        </span>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-        <p className="text-xs text-gray-500">All-Access</p>
-        <h2 className="mt-1 text-xl font-semibold text-white">Oddlytics All-Access</h2>
-        <div className="mt-4 flex items-baseline gap-2">
-          <span className="text-lg text-gray-500 line-through">$39</span>
-          <span className="text-4xl font-semibold text-white">$1</span>
-          <span className="text-sm text-gray-500">first week</span>
+      <div className="rounded-2xl border border-brand/30 bg-gradient-to-b from-brand-deep/40 to-black/40 p-6 sm:p-8">
+        <div className="flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-xl border border-brand/40 bg-brand/10 text-brand-bright">
+            <TrendingUp className="h-5 w-5" strokeWidth={2.5} />
+          </span>
+          <div>
+            <h1 className="text-xl font-bold text-white">Full Access</h1>
+            <p className="text-sm text-gray-400">Complete access to everything Oddlytics has to offer.</p>
+          </div>
         </div>
-        <p className="mt-1 text-xs text-gray-500">Then $39/month (placeholder pricing) — cancel anytime.</p>
+
+        <div className="mt-5 flex items-baseline gap-2">
+          <span className="text-lg text-gray-500 line-through">$99</span>
+          <span className="text-4xl font-extrabold text-white">$29</span>
+          <span className="rounded-full bg-brand/15 px-2 py-0.5 text-xs font-bold text-brand-bright">-71%</span>
+        </div>
 
         {hydrated && subscribed ? (
-          <div className="mt-6 rounded-lg bg-yes/10 px-4 py-3 text-center text-sm text-yes">
-            You're already on All-Access.
+          <div className="mt-5 rounded-lg bg-yes/10 px-4 py-3 text-center text-sm text-yes">
+            You&apos;re already on Full Access.
           </div>
         ) : (
           <button
             onClick={startCheckout}
             disabled={loading || verifying || !hydrated}
-            className="mt-6 w-full rounded-lg bg-white px-4 py-3 text-sm font-medium text-black hover:bg-gray-200 disabled:opacity-50"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-brand px-6 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-dark disabled:opacity-50"
           >
-            {verifying ? "Confirming your subscription…" : loading ? "Opening checkout…" : "Try Oddlytics for $1"}
+            {verifying ? "Confirming your subscription…" : loading ? "Opening checkout…" : "Get Full Access for $29 →"}
           </button>
         )}
         <p className="mt-2 text-center text-xs text-gray-500">
-          {paddleConfigured ? "Secure checkout via Paddle." : "Test mode — no payment provider connected yet."}
+          {paddleConfigured ? "Secure checkout via Paddle." : "Test mode — no payment provider connected yet, nothing will be charged."}
         </p>
 
-        <ul className="mt-6 space-y-2 text-sm text-gray-300">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-gray-400">
+          <span>✓ Instant access</span>
+          <span>✓ Cancel anytime</span>
+          <span>✓ Secure checkout</span>
+        </div>
+
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-300">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star key={i} className="h-3.5 w-3.5 fill-brand text-brand" />
+          ))}
+          <span className="font-semibold text-white">4.9/5</span>
+          <span className="text-gray-600">|</span>
+          <BadgeCheck className="h-4 w-4 text-brand-bright" /> verified by Proof
+        </div>
+
+        <ul className="mt-6 space-y-2.5 border-t border-white/10 pt-6">
           {FEATURES.map((f) => (
-            <li key={f} className="flex items-start gap-2">
-              <span className="mt-0.5 text-yes">✓</span>
+            <li key={f} className="flex items-start gap-2.5 text-sm text-gray-300">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-bright" strokeWidth={3} />
               {f}
             </li>
           ))}
         </ul>
       </div>
 
-      <div>
+      <div id="faq">
         <h2 className="text-center text-xl font-semibold text-white">FAQs</h2>
         <div className="mt-4">
           <FaqAccordion />
@@ -109,9 +131,9 @@ export default function PricingPage() {
       </div>
 
       <p className="text-center text-xs text-gray-500">
-        <Link href="/handpicked-bets" className="underline">
+        <a href="/handpicked-bets" className="underline">
           Preview Handpicked Bets
-        </Link>{" "}
+        </a>{" "}
         before subscribing.
       </p>
     </div>

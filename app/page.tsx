@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, Trophy } from "lucide-react";
+import { BadgeCheck, Star, Trophy } from "lucide-react";
 import FaqAccordion from "@/components/FaqAccordion";
 import FeaturePanels from "@/components/FeaturePanels";
 import PricingTeaserCard from "@/components/PricingTeaserCard";
@@ -19,7 +19,7 @@ export default function HomePage() {
               />
             ))}
           </div>
-          Real Polymarket data. Real-time picks.
+          <span className="font-semibold text-white">$3,261,863+</span> won by people like you
           <BadgeCheck className="h-4 w-4 text-blue-400" />
         </div>
 
@@ -34,8 +34,8 @@ export default function HomePage() {
         </h1>
 
         <p className="max-w-xl text-gray-400">
-          Oddlytics is your all-in-one platform for researching prediction markets with the power
-          of AI.
+          Oddlytics is your all in one platform for making money on prediction markets with the
+          power of AI.
         </p>
 
         <Link
@@ -44,6 +44,15 @@ export default function HomePage() {
         >
           Start winning smarter →
         </Link>
+
+        <div className="flex items-center gap-2 text-sm text-gray-300">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star key={i} className="h-3.5 w-3.5 fill-brand text-brand" />
+          ))}
+          <span className="font-semibold text-white">4.9/5</span>
+          <span className="text-gray-600">|</span>
+          <BadgeCheck className="h-4 w-4 text-brand-bright" /> verified by Proof
+        </div>
 
         <p className="max-w-lg text-xs italic text-gray-500">
           *Works with Kalshi, Polymarket, and more. Oddlytics never touches your money or wallet.*

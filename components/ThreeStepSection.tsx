@@ -60,6 +60,18 @@ export default function ThreeStepSection() {
       >
         Start winning smarter →
       </Link>
+
+      <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+        <div className="flex -space-x-2">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <span
+              key={i}
+              className="h-6 w-6 rounded-full border-2 border-black bg-gradient-to-br from-brand to-brand-dark"
+            />
+          ))}
+        </div>
+        Trusted by <span className="font-semibold text-brand-bright">28k+</span> Traders
+      </div>
     </section>
   );
 }

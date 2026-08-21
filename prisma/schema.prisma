@@ -14,7 +14,7 @@ model User {
   name             String?
   createdAt        DateTime @default(now())
 
-  cashUsd          Float    @default(1000)
+  cashUsd          Float    @default(100000)
   subscribed       Boolean  @default(false)
   paddleCustomerId String?  @unique
 
