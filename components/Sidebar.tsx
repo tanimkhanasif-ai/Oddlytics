@@ -50,7 +50,7 @@ export default function Sidebar() {
               title={item.label}
               className={`flex items-center justify-center gap-3 rounded-lg px-2.5 py-2 text-sm sm:justify-start ${
                 active
-                  ? "bg-brand/15 text-brand-bright"
+                  ? "bg-brand font-semibold text-black shadow-[0_6px_16px_-6px_rgba(34,197,94,0.6)]"
                   : "text-gray-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -66,7 +66,7 @@ export default function Sidebar() {
           title="Settings"
           className={`flex items-center justify-center gap-3 rounded-lg px-2.5 py-2 text-sm sm:justify-start ${
             pathname.startsWith("/settings")
-              ? "bg-brand/15 text-brand-bright"
+              ? "bg-brand font-semibold text-black"
               : "text-gray-400 hover:bg-white/5 hover:text-white"
           }`}
         >
@@ -78,7 +78,7 @@ export default function Sidebar() {
           title="Help & Support"
           className={`flex items-center justify-center gap-3 rounded-lg px-2.5 py-2 text-sm sm:justify-start ${
             pathname.startsWith("/help")
-              ? "bg-brand/15 text-brand-bright"
+              ? "bg-brand font-semibold text-black"
               : "text-gray-400 hover:bg-white/5 hover:text-white"
           }`}
         >

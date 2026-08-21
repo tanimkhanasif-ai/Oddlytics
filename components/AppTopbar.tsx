@@ -22,9 +22,13 @@ export default function AppTopbar({ title, icon: Icon }: AppTopbarProps) {
   return (
     <header className="-mx-6 -mt-6 mb-2 flex items-center justify-between border-b border-white/10 px-6 py-4 sm:-mx-10 sm:mb-0 sm:px-10">
       {title ? (
-        <div className="flex items-center gap-2 text-white">
-          {Icon && <Icon className="h-5 w-5 text-brand-bright" />}
-          <h1 className="text-lg font-semibold">{title}</h1>
+        <div className="flex items-center gap-3 text-white">
+          {Icon && (
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-black shadow-[0_6px_16px_-6px_rgba(34,197,94,0.6)]">
+              <Icon className="h-4.5 w-4.5" />
+            </span>
+          )}
+          <h1 className="text-xl font-bold tracking-tight">{title}</h1>
         </div>
       ) : (
         <p className="text-sm text-gray-300">
@@ -35,7 +39,7 @@ export default function AppTopbar({ title, icon: Icon }: AppTopbarProps) {
         {hydrated && !subscribed && (
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/10 px-4 py-1.5 text-sm font-medium text-brand-bright hover:bg-brand/20"
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-1.5 text-sm font-bold text-black shadow-[0_6px_16px_-6px_rgba(34,197,94,0.7)] transition hover:brightness-110"
           >
             Upgrade!
             <Zap className="h-3.5 w-3.5" fill="currentColor" />
