@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react";
 import { ImagePlus, Link2, Sparkles, Wand2 } from "lucide-react";
 import AppTopbar from "@/components/AppTopbar";
 import AnalysisResultView from "@/components/AnalysisResultView";
-import CoachChat from "@/components/CoachChat";
 import LockedOverlay from "@/components/LockedOverlay";
 import { useAnalysisHistory } from "@/lib/hooks/useAnalysisHistory";
 import { useSubscription } from "@/lib/hooks/useSubscription";
@@ -168,7 +167,7 @@ export default function AnalyzerPage() {
     <div className="space-y-6">
       <AppTopbar title="Predictor" icon={Sparkles} />
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+      <div className="mx-auto max-w-2xl">
         <div className="space-y-6">
           <LockedOverlay
             unlocked={subscribed}
@@ -303,10 +302,6 @@ export default function AnalyzerPage() {
           </LockedOverlay>
 
           {result && <AnalysisResultView result={result} />}
-        </div>
-
-        <div className="min-h-[420px] lg:sticky lg:top-6 lg:h-[calc(100vh-8rem)]">
-          <CoachChat context={result} />
         </div>
       </div>
     </div>
