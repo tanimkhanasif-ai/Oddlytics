@@ -7,10 +7,15 @@ import ExitIntentModal from "@/components/ExitIntentModal";
 import SocialProofToast from "@/components/SocialProofToast";
 import UrgencyBanner from "@/components/UrgencyBanner";
 
-const MARKETING_PATHS = ["/", "/pricing"];
+const MARKETING_PATHS = ["/pricing"];
 
 export default function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";
+
+  // The landing page renders its own full-page chrome (offer bar, nav, footer, toast).
+  if (pathname === "/") {
+    return <>{children}</>;
+  }
 
   if (pathname.startsWith("/checkout")) {
     return <main className="min-h-screen">{children}</main>;

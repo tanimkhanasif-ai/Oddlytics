@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { Archivo } from "next/font/google";
 import AppChrome from "@/components/AppChrome";
 import AuthProvider from "@/components/AuthProvider";
 import "./globals.css";
+
+const archivo = Archivo({
+  subsets: ["latin"],
+  variable: "--font-archivo",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Oddlytics",
@@ -10,8 +17,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-[#0b0f17] text-gray-200">
+    <html lang="en" className={archivo.variable}>
+      <body className="min-h-screen font-sans">
         <AuthProvider>
           <AppChrome>{children}</AppChrome>
         </AuthProvider>

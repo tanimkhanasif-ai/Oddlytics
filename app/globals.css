@@ -2,40 +2,198 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #0b0f17;
-  color: #e5e7eb;
+/*
+ * Design tokens ported from the Lovable landing reference. All colours are oklch.
+ * Tailwind 3 can't use @theme inline, so the semantic names are wired up in
+ * tailwind.config.ts and reference these custom properties.
+ */
+:root {
+  --radius: 0.9rem;
+  --background: oklch(0.09 0.02 155);
+  --foreground: oklch(0.98 0.005 150);
+  --card: oklch(0.14 0.03 155);
+  --card-foreground: oklch(0.98 0.005 150);
+  --muted: oklch(0.2 0.04 155);
+  --muted-foreground: oklch(0.74 0.02 150);
+  --border: oklch(0.78 0.26 145 / 22%);
+
+  --brand: oklch(0.75 0.27 145);
+  --brand-light: oklch(0.85 0.25 145);
+  --on-brand: oklch(0.2 0.08 150);
+  --violet: oklch(0.7 0.19 300);
+  --proof: oklch(0.68 0.19 250);
+  --proof-light: oklch(0.8 0.15 250);
+
+  --sheet-top: oklch(1 0 0);
+  --sheet-bottom: oklch(0.94 0.05 150);
+
+  --glow-soft: 0 0 24px oklch(0.75 0.27 145 / 22%);
+  --glow-brand: 0 0 34px oklch(0.75 0.27 145 / 45%);
+  --glow-brand-strong: 0 0 60px oklch(0.8 0.27 145 / 70%);
+  --glow-violet: 0 0 34px oklch(0.7 0.19 300 / 40%);
+  --glow-proof: 0 0 28px oklch(0.68 0.19 250 / 40%);
 }
 
-/* Marketing-page decorative backdrop: green aurora glow + scattered dot particles,
-   matching the landing-page screenshots. Purely decorative, pointer-events disabled. */
-.marketing-bg {
-  position: relative;
-  background-color: #05070a;
-  isolation: isolate;
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
 }
 
-.marketing-bg::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-  background-image:
-    radial-gradient(ellipse 90% 55% at 15% 0%, rgba(34, 197, 94, 0.22), transparent 60%),
-    radial-gradient(ellipse 70% 45% at 85% 15%, rgba(34, 197, 94, 0.14), transparent 60%),
-    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(34, 197, 94, 0.2), transparent 65%);
+@layer components {
+  /* Full-page luminous backdrop: black base, drifting green aurora, twinkling starfield. */
+  .aurora {
+    position: relative;
+    isolation: isolate;
+    background-color: oklch(0.05 0.01 155);
+  }
+  .aurora::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(120% 60% at 50% 120%, oklch(0.78 0.27 145 / 85%) 0%, oklch(0.5 0.2 148 / 35%) 35%, transparent 65%),
+      radial-gradient(70% 40% at 0% 30%, oklch(0.7 0.24 145 / 22%) 0%, transparent 60%),
+      radial-gradient(70% 40% at 100% 70%, oklch(0.7 0.24 145 / 18%) 0%, transparent 60%);
+    animation: aurora-drift 16s ease-in-out infinite alternate;
+  }
+  .aurora::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(1.5px 1.5px at 12% 22%, oklch(0.95 0.06 145 / 80%) 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 78% 14%, oklch(0.95 0.06 145 / 70%) 50%, transparent 51%),
+      radial-gradient(1.6px 1.6px at 33% 68%, oklch(0.95 0.06 145 / 60%) 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 62% 47%, oklch(0.95 0.06 145 / 65%) 50%, transparent 51%),
+      radial-gradient(1.8px 1.8px at 88% 82%, oklch(0.95 0.06 145 / 70%) 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 22% 88%, oklch(0.95 0.06 145 / 60%) 50%, transparent 51%),
+      radial-gradient(1.4px 1.4px at 51% 8%, oklch(0.95 0.06 145 / 60%) 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 6% 56%, oklch(0.95 0.06 145 / 55%) 50%, transparent 51%);
+    background-size: 100% 100%;
+    animation: star-twinkle 5s ease-in-out infinite alternate;
+  }
+
+  .glass-panel {
+    background: linear-gradient(160deg, oklch(0.16 0.04 155 / 90%), oklch(0.1 0.02 155 / 85%));
+    border: 1px solid oklch(0.75 0.27 145 / 28%);
+    box-shadow: var(--glow-soft);
+    backdrop-filter: blur(12px);
+  }
+
+  .sheet-card {
+    background: linear-gradient(150deg, var(--sheet-top) 0%, var(--sheet-bottom) 100%);
+    color: var(--on-brand);
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 2.6s ease-in-out infinite;
+  }
+
+  .reveal {
+    animation: reveal-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .shine-streak {
+    position: absolute;
+    top: -60%;
+    bottom: -60%;
+    left: -25%;
+    width: 14%;
+    pointer-events: none;
+    transform: skewX(-20deg);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(1 0 0 / 85%) 45%,
+      oklch(1 0 0 / 95%) 55%,
+      transparent
+    );
+    opacity: 0;
+  }
+
+  .digit-cell {
+    display: inline-block;
+    overflow: hidden;
+    line-height: 1.15;
+  }
+  .digit-cell > span {
+    display: inline-block;
+    animation: digit-drop 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .btn-shining {
+    animation: press-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .btn-shining .shine-streak {
+    animation: shine-sweep 0.65s ease-out forwards;
+  }
+  .btn-shining .shine-streak-2 {
+    animation-delay: 0.13s;
+  }
+  .btn-seesaw {
+    animation: seesaw 2s ease-in-out;
+  }
+  .btn-shining.btn-seesaw {
+    animation: press-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1), seesaw 2s ease-in-out;
+  }
 }
 
-.marketing-bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.5;
-  background-image: radial-gradient(rgba(74, 222, 128, 0.35) 1px, transparent 1px);
-  background-size: 42px 42px;
-  background-position: 10px 10px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 20%, black, transparent 75%);
+@keyframes aurora-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.9; }
+  100% { transform: translate3d(0, -3%, 0) scale(1.08); opacity: 1; }
+}
+
+@keyframes star-twinkle {
+  0% { opacity: 0.45; }
+  100% { opacity: 1; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 22px oklch(0.75 0.27 145 / 40%); }
+  50% { box-shadow: 0 0 52px oklch(0.8 0.27 145 / 75%); }
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shine-sweep {
+  0% { left: -25%; opacity: 0; }
+  12% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { left: 115%; opacity: 0; }
+}
+
+@keyframes press-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+@keyframes digit-drop {
+  0% { transform: translateY(-90%); opacity: 0; filter: blur(2px); }
+  60% { transform: translateY(6%); opacity: 1; filter: blur(0); }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes seesaw {
+  0% { transform: rotate(0deg); }
+  15% { transform: rotate(-6deg); }
+  35% { transform: rotate(6deg); }
+  55% { transform: rotate(-4.5deg); }
+  75% { transform: rotate(3deg); }
+  100% { transform: rotate(0deg); }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+section[id] {
+  scroll-margin-top: 96px;
 }
