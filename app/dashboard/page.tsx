@@ -71,32 +71,32 @@ function FeatureCard({ href, icon: Icon, color, titleGreen, titleWhite, body }: 
   return (
     <Link
       href={href}
-      className="group rounded-2xl border border-white/10 bg-white/[0.03] p-7 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06]"
+      className="group flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-10 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06]"
     >
-      <div className="flex items-center gap-4">
-        <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${BADGE_COLORS[color]}`}>
-          <Icon className="h-6 w-6" strokeWidth={2.3} />
+      <div className="flex items-center gap-5">
+        <span className={`grid h-20 w-20 shrink-0 place-items-center rounded-2xl ${BADGE_COLORS[color]}`}>
+          <Icon className="h-9 w-9" strokeWidth={2.2} />
         </span>
-        <h3 className="text-2xl font-extrabold tracking-tight">
+        <h3 className="text-3xl font-extrabold tracking-tight">
           <span className="text-brand-bright">{titleGreen}</span>{" "}
           <span className="text-white">{titleWhite}</span>
         </h3>
       </div>
-      <p className="mt-4 text-sm leading-relaxed text-gray-400">{body}</p>
+      <p className="mt-6 text-base leading-relaxed text-gray-400">{body}</p>
     </Link>
   );
 }
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <AppTopbar />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         {TOP_ROW.map((card) => (
           <FeatureCard key={card.href} {...card} />
         ))}
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-3">
         {BOTTOM_ROW.map((card) => (
           <FeatureCard key={card.href} {...card} />
         ))}
