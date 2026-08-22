@@ -6,7 +6,6 @@ import { useSession, signOut } from "next-auth/react";
 import {
   LayoutGrid,
   Sparkles,
-  MessageCircle,
   Monitor,
   Wallet,
   Users,
@@ -21,7 +20,6 @@ import ModeBadge from "@/components/ModeBadge";
 const ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/analyzer", label: "AI Predictor", icon: Sparkles },
-  { href: "/coach", label: "AI Coach", icon: MessageCircle },
   { href: "/paper-trading", label: "Virtual Trading", icon: Monitor },
   { href: "/handpicked-bets", label: "Handpicked", icon: Bookmark },
   { href: "/wallet-tracker", label: "Wallet Tracker", icon: Wallet },
