@@ -35,7 +35,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
         <UrgencyBanner />
         <Nav />
         <main className="mx-auto max-w-6xl px-6 py-16">{children}</main>
-        <footer className="mx-auto max-w-6xl px-6 pb-10 pt-4 text-xs text-muted-foreground">
+        <footer className="mx-auto max-w-6xl px-6 pb-10 pt-4 text-xs text-gray-500">
           Oddlytics provides informational analysis only, not financial advice. Paper Trading uses
           virtual money only. Nothing here is a guarantee of any outcome.
         </footer>

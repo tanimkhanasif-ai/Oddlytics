@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <div className="aurora min-h-screen overflow-x-clip font-sans">
+    <div className="aurora min-h-screen overflow-x-clip font-display text-foreground">
       <OfferBar />
       <Nav />
       <main>

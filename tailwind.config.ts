@@ -17,11 +17,12 @@ const config: Config = {
         proof: "var(--proof)",
         "on-brand": "var(--on-brand)",
 
-        // Product colours kept for the authenticated app.
+        // Product colours for the authenticated app — unchanged from before the
+        // landing port, so app pages keep their original greens.
         yes: "#22c55e",
         no: "#ef4444",
         brand: {
-          DEFAULT: "var(--brand)",
+          DEFAULT: "#22c55e",
           light: "var(--brand-light)",
           bright: "#4ade80",
           dark: "#16a34a",
@@ -29,7 +30,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-archivo)", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Archivo is opt-in via `font-display` (the landing page only); the rest
+        // of the app keeps the default system stack.
         display: ["var(--font-archivo)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       borderRadius: {
