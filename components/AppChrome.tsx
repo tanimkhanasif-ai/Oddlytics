@@ -18,24 +18,24 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
   }
 
   if (pathname.startsWith("/checkout")) {
-    return <main className="min-h-screen">{children}</main>;
+    return <main className="aurora min-h-screen">{children}</main>;
   }
 
   if (pathname.startsWith("/login") || pathname.startsWith("/signup")) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-6 py-16">
-        {children}
-      </main>
+      <div className="aurora min-h-screen">
+        <main className="flex min-h-screen items-center justify-center px-6 py-16">{children}</main>
+      </div>
     );
   }
 
   if (MARKETING_PATHS.includes(pathname)) {
     return (
-      <div className="marketing-bg min-h-screen">
+      <div className="aurora min-h-screen">
         <UrgencyBanner />
         <Nav />
         <main className="mx-auto max-w-6xl px-6 py-16">{children}</main>
-        <footer className="mx-auto max-w-6xl px-6 pb-10 pt-4 text-xs text-gray-500">
+        <footer className="mx-auto max-w-6xl px-6 pb-10 pt-4 text-xs text-muted-foreground">
           Oddlytics provides informational analysis only, not financial advice. Paper Trading uses
           virtual money only. Nothing here is a guarantee of any outcome.
         </footer>
@@ -46,7 +46,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="aurora min-h-screen">
       <UrgencyBanner />
       <div className="flex min-h-screen">
         <Sidebar />

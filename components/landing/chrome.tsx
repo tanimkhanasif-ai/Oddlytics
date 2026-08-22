@@ -6,34 +6,18 @@ import { X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { DropTime, GlowButton, Logo } from "./primitives";
 
-/** Real wall-clock countdown to tonight's 23:59:59 local, rolling over at midnight. */
-function getTonightDeadline(): number {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
-  return d.getTime();
-}
-
-export function useCountdown() {
-  const [remaining, setRemaining] = useState<number | null>(null);
+/** Looping countdown: counts down from 4:52:09 and restarts when it hits zero. */
+export function useCountdown(initialSeconds = 4 * 3600 + 52 * 60 + 9) {
+  const [seconds, setSeconds] = useState(initialSeconds);
 
   useEffect(() => {
-    let deadline = getTonightDeadline();
-    const tick = () => {
-      const now = Date.now();
-      if (now >= deadline) deadline = getTonightDeadline();
-      setRemaining(deadline - now);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(() => setSeconds((s) => (s <= 0 ? initialSeconds : s - 1)), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [initialSeconds]);
 
-  if (remaining === null) return "00:00:00";
-  const total = Math.max(0, Math.floor(remaining / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
   return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
 }
 

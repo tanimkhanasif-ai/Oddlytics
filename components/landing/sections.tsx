@@ -456,7 +456,7 @@ const FAQS: { icon: LucideIcon; q: string; a: string }[] = [
 ];
 
 export function Faqs() {
-  const [open, setOpen] = useState<number[]>([0, 1]);
+  const [open, setOpen] = useState<number[]>([0]);
   const toggle = (i: number) =>
     setOpen((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
 
