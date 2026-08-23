@@ -345,7 +345,7 @@ export function Pricing() {
           </span>
         </div>
 
-        <div className="glass-panel reveal mt-8 rounded-3xl p-8">
+        <div className="reveal mt-8 rounded-[28px] border border-brand/50 bg-[linear-gradient(160deg,oklch(0.16_0.06_150/0.75),oklch(0.08_0.02_155/0.92))] p-7 shadow-[0_0_0_1px_oklch(0.75_0.27_145/25%),var(--glow-brand)] ring-1 ring-brand/20 ring-offset-4 ring-offset-background">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-foreground/80">
               Trusted by <span className="font-semibold text-brand">28k+ traders</span>
@@ -355,11 +355,11 @@ export function Pricing() {
             </span>
           </div>
 
-          <div className="mt-7 flex items-center gap-4">
-            <span className="flex h-16 w-16 items-center justify-center rounded-2xl border border-brand/40 bg-brand/10 text-brand shadow-[var(--glow-soft)]">
+          <div className="mt-6 flex items-center gap-4">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-brand/40 bg-brand/10 text-brand shadow-[var(--glow-soft)]">
               <svg
                 viewBox="0 0 24 24"
-                className="h-8 w-8"
+                className="h-7 w-7"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2.4"
@@ -371,23 +371,23 @@ export function Pricing() {
               </svg>
             </span>
             <div>
-              <h3 className="text-3xl font-extrabold tracking-tight text-foreground">Full Access</h3>
-              <p className="text-foreground/70">
+              <h3 className="text-2xl font-extrabold tracking-tight text-foreground">Full Access</h3>
+              <p className="text-sm text-foreground/70">
                 Complete access to everything Oddlytics has to offer.
               </p>
             </div>
           </div>
 
-          <div className="mt-6 flex items-end gap-3">
-            <span className="text-4xl font-extrabold text-foreground">Just</span>
-            <span className="text-4xl font-extrabold text-muted-foreground line-through">$29</span>
-            <span className="text-4xl font-extrabold text-foreground">$1</span>
-            <span className="mb-1.5 rounded-full bg-brand/15 px-3 py-1 text-sm font-semibold text-brand">
+          <div className="mt-5 flex items-end gap-2.5">
+            <span className="text-2xl font-bold text-foreground">Just</span>
+            <span className="text-2xl font-bold text-muted-foreground line-through">$29</span>
+            <span className="text-3xl font-extrabold text-foreground">$1</span>
+            <span className="mb-1 rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-semibold text-brand">
               -97%
             </span>
           </div>
 
-          <GlowButton href="/pricing" className="mt-6 w-full py-6 text-2xl md:text-3xl">
+          <GlowButton href="/pricing" className="mt-5 w-full py-4 text-lg">
             Get Full Access for $1 <Arrow />
           </GlowButton>
 
@@ -514,6 +514,82 @@ export function Faqs() {
               </div>
             );
           })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Slider({
+  label,
+  value,
+  onChange,
+  max,
+  prefix = "",
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  max: number;
+  prefix?: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-sm font-medium text-foreground/85">
+        <span>{label}</span>
+        <span className="rounded-full border border-brand/40 bg-brand/10 px-3 py-1 font-semibold text-brand">
+          {prefix}
+          {value}
+          {value >= max ? "+" : ""}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={max}
+        value={value}
+        aria-label={label}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-brand/20 accent-[color:var(--brand)]"
+      />
+    </div>
+  );
+}
+
+export function ProfitCalculator() {
+  const [profit, setProfit] = useState(120);
+  const [picks, setPicks] = useState(30);
+  const total = (profit * picks).toLocaleString("en-US");
+
+  return (
+    <section className="relative px-6 py-20">
+      <div className="mx-auto max-w-3xl text-center">
+        <h2 className="text-4xl font-extrabold tracking-tight text-foreground md:text-5xl">
+          See your <span className="text-brand">potential.</span>
+          <br />
+          Month after month.
+        </h2>
+
+        <div className="reveal mt-10 space-y-7 rounded-[28px] border border-brand/50 bg-[linear-gradient(160deg,oklch(0.16_0.06_150/0.75),oklch(0.08_0.02_155/0.92))] p-7 text-left shadow-[0_0_0_1px_oklch(0.75_0.27_145/25%),var(--glow-brand)]">
+          <Slider
+            label="Average profit per winning bet"
+            value={profit}
+            onChange={setProfit}
+            max={1000}
+            prefix="$"
+          />
+          <Slider label="AI winning picks per month" value={picks} onChange={setPicks} max={1000} />
+
+          <div className="rounded-2xl border border-brand/40 bg-brand/10 p-6 text-center shadow-[var(--glow-soft)]">
+            <p className="text-sm font-medium text-foreground/75">Your estimated monthly profit</p>
+            <p className="mt-2 text-4xl font-extrabold text-brand md:text-5xl">
+              $<DropTime value={total} />
+            </p>
+          </div>
+
+          <GlowButton href="/pricing" className="w-full py-4 text-lg">
+            Calculate my profit now <Arrow />
+          </GlowButton>
         </div>
       </div>
     </section>

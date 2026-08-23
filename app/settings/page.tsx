@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
+import { ArrowLeft, ChevronRight, AtSign, Zap, LogOut, LifeBuoy, RotateCcw } from "lucide-react";
+import { GlowButton } from "@/components/landing/primitives";
 import { useUsername } from "@/lib/hooks/useSettings";
 import { useSubscription } from "@/lib/hooks/useSubscription";
 
@@ -15,6 +17,7 @@ export default function SettingsPage() {
   const [resetting, setResetting] = useState(false);
 
   async function resetAccountData() {
+    if (!confirm("Reset account data? This clears positions, follows and history.")) return;
     setResetting(true);
     try {
       await fetch("/api/account", {
@@ -29,82 +32,120 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-lg space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Settings</h1>
-        {session?.user?.email && (
-          <p className="mt-1 text-sm text-gray-400">Signed in as {session.user.email}</p>
-        )}
+    <div className="mx-auto max-w-2xl space-y-5">
+      <div className="flex items-center gap-3">
+        <Link href="/dashboard" aria-label="Back to dashboard" className="ghost-button h-9 w-9">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <h2 className="text-xl font-bold text-foreground">Settings</h2>
       </div>
 
       {!subscribed && (
-        <Link
-          href="/pricing"
-          className="block rounded-lg bg-white px-4 py-3 text-center text-sm font-medium text-black hover:bg-gray-200"
-        >
-          Unlock all features
-        </Link>
+        <GlowButton href="/pricing" className="w-full px-6 py-3.5 text-base">
+          Unlock Everything for $1 <Zap className="h-4 w-4 fill-current" />
+        </GlowButton>
       )}
 
-      <div>
-        <label className="text-xs font-medium text-gray-400">Display name</label>
-        <div className="mt-1 flex gap-2">
-          <input
-            defaultValue={username}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="@yourname"
-            className="flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-600"
-          />
+      <div className="glass-panel rounded-3xl p-5">
+        <label htmlFor="username" className="text-sm font-semibold text-foreground">
+          Username
+        </label>
+        <div className="mt-2 flex gap-2">
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-brand/25 bg-brand/[0.05] px-3.5 py-2.5 focus-within:border-brand/50">
+            <AtSign className="h-4 w-4 text-brand" />
+            <input
+              id="username"
+              defaultValue={username}
+              onChange={(e) => setDraft(e.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              placeholder="username"
+            />
+          </div>
           <button
             onClick={() => setUsername(draft || username)}
             disabled={!hydrated}
-            className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-white/20 disabled:opacity-50"
+            className="ghost-button px-5 text-sm disabled:opacity-50"
           >
             Save
           </button>
         </div>
-      </div>
-
-      <div>
-        <p className="text-xs font-medium text-gray-400">Subscription</p>
-        <p className="mt-1 text-sm text-gray-300">
-          {subscribed ? "All-Access (test mode — no real charge)" : "Free"}
-        </p>
-      </div>
-
-      <div className="border-t border-white/10 pt-6">
-        <p className="text-xs font-medium text-gray-400">Account data</p>
-        <p className="mt-1 text-xs text-gray-500">
-          Clears Paper Trading, subscription status, tracked wallets, Copy Trading follows, and
-          analysis history for your account. Your login stays intact.
-        </p>
-        <button
-          onClick={resetAccountData}
-          disabled={resetting}
-          className="mt-2 rounded-lg bg-no/10 px-4 py-2 text-sm font-medium text-no hover:bg-no/20 disabled:opacity-50"
-        >
-          {resetting ? "Resetting…" : "Reset account data"}
-        </button>
-        {cleared && (
-          <p className="mt-2 text-xs text-yes">Cleared — reload the page to see it reset.</p>
+        {session?.user?.email && (
+          <p className="mt-3 text-xs text-muted-foreground">Signed in as {session.user.email}</p>
         )}
       </div>
 
-      <div className="border-t border-white/10 pt-6">
+      <div className="glass-panel divide-y divide-border rounded-3xl p-1.5">
+        <Link
+          href="/pricing"
+          className="flex items-center gap-3 rounded-xl px-4 py-3.5 transition-colors duration-200 hover:bg-brand/[0.08]"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="font-medium text-foreground">
+              {subscribed ? "Manage subscription" : "Unlock all features"}
+            </span>
+            {!subscribed && (
+              <span className="ml-2 inline-flex gap-1.5 align-middle text-[11px] font-semibold">
+                <span className="rounded-md border border-brand/40 bg-brand/[0.12] px-1.5 py-0.5 text-brand">
+                  -97% off
+                </span>
+                <span className="rounded-md border border-proof/40 bg-proof/[0.12] px-1.5 py-0.5 text-proof">
+                  $1 first week
+                </span>
+              </span>
+            )}
+          </span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+
+        <Link
+          href="/help"
+          className="flex items-center gap-3 rounded-xl px-4 py-3.5 transition-colors duration-200 hover:bg-brand/[0.08]"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-brand/30 bg-brand/10">
+            <LifeBuoy className="h-4 w-4 text-brand" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-foreground">Help &amp; Support</span>
+            <span className="block text-xs text-muted-foreground">Guides and contact</span>
+          </span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+
+        <button
+          onClick={resetAccountData}
+          disabled={resetting}
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-colors duration-200 hover:bg-foreground/5 disabled:opacity-50"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-down/30 bg-down/10">
+            <RotateCcw className="h-4 w-4 text-down" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-foreground">
+              {resetting ? "Resetting…" : "Reset account data"}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              Clears positions, follows and history. Your login stays.
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+
         <button
           onClick={() => signOut({ callbackUrl: "/" })}
-          className="text-sm text-gray-400 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-colors duration-200 hover:bg-foreground/5"
         >
-          Log out
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-foreground/5">
+            <LogOut className="h-4 w-4 text-muted-foreground" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-foreground">Log out</span>
+            <span className="block text-xs text-muted-foreground">End this session</span>
+          </span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
 
-      <div className="border-t border-white/10 pt-6">
-        <p className="text-xs font-medium text-gray-400">Support</p>
-        <p className="mt-1 text-sm text-gray-500">
-          Support isn't wired up yet — this is a placeholder for a real contact flow.
-        </p>
-      </div>
+      {cleared && <p className="text-xs text-up">Cleared — reload the page to see it reset.</p>}
     </div>
   );
 }

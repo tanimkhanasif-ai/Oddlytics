@@ -32,6 +32,15 @@
   --glow-brand-strong: 0 0 60px oklch(0.8 0.27 145 / 70%);
   --glow-violet: 0 0 34px oklch(0.7 0.19 300 / 40%);
   --glow-proof: 0 0 28px oklch(0.68 0.19 250 / 40%);
+
+  /* Data/status colours used by the app pages (market rows, P&L, trader tints). */
+  --up: oklch(0.84 0.23 143);
+  --down: oklch(0.66 0.2 25);
+  --info: oklch(0.72 0.16 240);
+  --amber: oklch(0.82 0.16 85);
+  --cyan: oklch(0.8 0.13 200);
+  --glass: oklch(0.26 0.03 155 / 18%);
+  --glass-border: oklch(0.75 0.27 145 / 28%);
 }
 
 @layer base {
@@ -139,6 +148,60 @@
   }
   .btn-shining.btn-seesaw {
     animation: press-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1), seesaw 2s ease-in-out;
+  }
+
+  /* --- App-page surfaces, in the landing's brand language --- */
+
+  /* Hoverable card. Same gradient/border as glass-panel, plus a lift on hover. */
+  .glass-card {
+    background: linear-gradient(160deg, oklch(0.16 0.04 155 / 90%), oklch(0.1 0.02 155 / 85%));
+    border: 1px solid oklch(0.75 0.27 145 / 28%);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--glow-soft);
+    transition: transform 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
+  }
+  .glass-card:hover {
+    transform: translateY(-3px);
+    border-color: oklch(0.75 0.27 145 / 50%);
+    box-shadow: var(--glow-brand);
+  }
+
+  /* Secondary action — outlined, matching the landing's feature-panel CTAs. */
+  .ghost-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid oklch(0.75 0.27 145 / 40%);
+    background: oklch(0.75 0.27 145 / 7%);
+    color: var(--foreground);
+    font-weight: 600;
+    backdrop-filter: blur(12px);
+    transition: transform 200ms ease, border-color 200ms ease, background-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .ghost-button:hover {
+    transform: translateY(-1px);
+    border-color: oklch(0.75 0.27 145 / 60%);
+    background: oklch(0.75 0.27 145 / 12%);
+    box-shadow: var(--glow-soft);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 18px oklch(0.75 0.27 145 / 55%);
+  }
+
+  /* Paywalled content sitting behind an unlock CTA. */
+  .locked-blur {
+    filter: blur(7px) saturate(80%);
+    opacity: 0.55;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .animate-fade-in {
+    animation: reveal-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
 

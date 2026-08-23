@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Faqs, Features, Hero, Pricing, Steps } from "@/components/landing/sections";
+import { Faqs, Features, Hero, Pricing, ProfitCalculator, Steps } from "@/components/landing/sections";
 import { Footer, Nav, OfferBar, WinToast } from "@/components/landing/chrome";
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <div className="aurora min-h-screen overflow-x-clip font-display text-foreground">
+    <div className="aurora min-h-screen overflow-x-clip font-sans">
       <OfferBar />
       <Nav />
       <main>
@@ -25,6 +25,7 @@ export default function HomePage() {
         <Steps />
         <Features />
         <Pricing />
+        <ProfitCalculator />
         <Faqs />
       </main>
       <Footer />

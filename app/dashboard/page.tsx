@@ -1,138 +1,154 @@
-"use client";
-
 import Link from "next/link";
-import { BadgeCheck, Bookmark, Monitor, Sparkles, Star, Users, Wallet } from "lucide-react";
-import type { ComponentType } from "react";
-import AppTopbar from "@/components/AppTopbar";
+import { TrendingUp, MonitorPlay, BookmarkCheck, Wallet, Users, Star } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { MoneyCounter } from "@/components/app/MoneyCounter";
+import { ProofBadge } from "@/components/app/ProofBadge";
 
-const BADGE_COLORS: Record<string, string> = {
-  green: "bg-brand text-black shadow-[0_8px_24px_-8px_rgba(34,197,94,0.6)]",
-  amber: "bg-amber-500 text-black shadow-[0_8px_24px_-8px_rgba(245,158,11,0.6)]",
-  blue: "bg-blue-500 text-white shadow-[0_8px_24px_-8px_rgba(59,130,246,0.6)]",
-  purple: "bg-purple-500 text-white shadow-[0_8px_24px_-8px_rgba(168,85,247,0.6)]",
-};
-
-interface CardDef {
-  href: string;
-  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
-  color: keyof typeof BADGE_COLORS;
-  titleGreen: string;
-  titleWhite: string;
+interface BigCard {
+  to: string;
+  icon: LucideIcon;
+  lead: string;
+  rest: string;
+  sub: string;
   body: string;
 }
 
-const TOP_ROW: CardDef[] = [
+interface SmallCard extends BigCard {
+  tint: string;
+}
+
+const BIG: BigCard[] = [
   {
-    href: "/analyzer",
-    icon: Sparkles,
-    color: "green",
-    titleGreen: "AI",
-    titleWhite: "Predictor",
+    to: "/analyzer",
+    icon: TrendingUp,
+    lead: "AI",
+    rest: "Predictor",
+    sub: "AI Market Predictor",
     body: "Upload a screenshot of any market and instantly get the winning pick to bet on.",
   },
   {
-    href: "/paper-trading",
-    icon: Monitor,
-    color: "green",
-    titleGreen: "Virtual",
-    titleWhite: "Trading",
+    to: "/paper-trading",
+    icon: MonitorPlay,
+    lead: "Virtual",
+    rest: "Trading",
+    sub: "Virtual Trading",
     body: "Trade with virtual money and test strategies in real market conditions – zero risk.",
   },
 ];
 
-const BOTTOM_ROW: CardDef[] = [
+const SMALL: SmallCard[] = [
   {
-    href: "/handpicked-bets",
-    icon: Bookmark,
-    color: "amber",
-    titleGreen: "Handpicked",
-    titleWhite: "Bets",
+    to: "/handpicked-bets",
+    icon: BookmarkCheck,
+    lead: "Handpicked",
+    rest: "Bets",
+    sub: "Handpicked Bets",
     body: "Fresh, high-conviction picks from our AI every day to help you win more.",
+    tint: "border-amber/40 bg-amber/10 text-amber",
   },
   {
-    href: "/wallet-tracker",
+    to: "/wallet-tracker",
     icon: Wallet,
-    color: "blue",
-    titleGreen: "Wallet",
-    titleWhite: "Tracker",
+    lead: "Wallet",
+    rest: "Tracker",
+    sub: "Wallet Tracker",
     body: "Track the performance of your wallets in real time. Know what's working.",
+    tint: "border-cyan/40 bg-cyan/10 text-cyan",
   },
   {
-    href: "/copy-trading",
+    to: "/copy-trading",
     icon: Users,
-    color: "purple",
-    titleGreen: "Copy",
-    titleWhite: "Trading",
+    lead: "Copy",
+    rest: "Trading",
+    sub: "Copy Trading",
     body: "Automatically mirror top traders' moves in real time. Set your budget and relax.",
+    tint: "border-violet/40 bg-violet/10 text-violet",
   },
 ];
 
-function FeatureCard({ href, icon: Icon, color, titleGreen, titleWhite, body }: CardDef) {
-  return (
-    <Link
-      href={href}
-      className="group flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-10 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06]"
-    >
-      <div className="flex items-center gap-5">
-        <span className={`grid h-20 w-20 shrink-0 place-items-center rounded-2xl ${BADGE_COLORS[color]}`}>
-          <Icon className="h-9 w-9" strokeWidth={2.2} />
-        </span>
-        <h3 className="text-3xl font-extrabold tracking-tight">
-          <span className="text-brand-bright">{titleGreen}</span>{" "}
-          <span className="text-white">{titleWhite}</span>
-        </h3>
-      </div>
-      <p className="mt-6 text-base leading-relaxed text-gray-400">{body}</p>
-    </Link>
-  );
-}
-
 export default function DashboardPage() {
   return (
-    <div className="space-y-6">
-      <AppTopbar />
-      <div className="grid gap-6 sm:grid-cols-2">
-        {TOP_ROW.map((card) => (
-          <FeatureCard key={card.href} {...card} />
-        ))}
-      </div>
-      <div className="grid gap-6 sm:grid-cols-3">
-        {BOTTOM_ROW.map((card) => (
-          <FeatureCard key={card.href} {...card} />
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        {BIG.map((c) => (
+          <Link key={c.to} href={c.to} className="glass-card block rounded-3xl p-6">
+            <div className="flex items-center gap-5">
+              <span className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl border border-brand/40 bg-brand/[0.12] shadow-[var(--glow-soft)]">
+                <c.icon className="h-8 w-8 text-brand" />
+              </span>
+              <h2 className="text-3xl font-bold sm:text-4xl">
+                <span className="text-brand">{c.lead}</span>{" "}
+                <span className="text-foreground">{c.rest}</span>
+              </h2>
+            </div>
+            <div className="mt-6 h-px w-14 bg-brand/70 shadow-[0_0_10px_var(--brand)]" />
+            <p className="mt-4 font-semibold text-brand">{c.sub}</p>
+            <p className="mt-2 max-w-md leading-relaxed text-muted-foreground">{c.body}</p>
+          </Link>
         ))}
       </div>
 
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center sm:flex-row sm:justify-between sm:text-left">
-        <div className="flex items-center gap-3">
-          <div className="flex -space-x-2">
-            {[0, 1, 2].map((i) => (
+      <div className="grid gap-4 lg:grid-cols-3">
+        {SMALL.map((c) => (
+          <Link key={c.to} href={c.to} className="glass-card block rounded-3xl p-5">
+            <div className="flex items-center gap-4">
+              <span
+                className={`flex h-14 w-14 items-center justify-center rounded-xl border ${c.tint}`}
+              >
+                <c.icon className="h-6 w-6" />
+              </span>
+              <h3 className="text-xl font-bold">
+                <span className="text-brand">{c.lead}</span>{" "}
+                <span className="text-foreground">{c.rest}</span>
+              </h3>
+            </div>
+            <div className="mt-5 h-px w-12 bg-brand/70 shadow-[0_0_10px_var(--brand)]" />
+            <p className="mt-3 font-semibold text-brand">{c.sub}</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{c.body}</p>
+          </Link>
+        ))}
+      </div>
+
+      <div className="glass-panel flex flex-wrap items-center justify-between gap-6 rounded-3xl p-6">
+        <div className="flex items-center gap-4">
+          <div className="flex -space-x-3">
+            {["A", "M", "J"].map((i) => (
               <span
                 key={i}
-                className="h-8 w-8 rounded-full border-2 border-black bg-gradient-to-br from-brand to-brand-dark"
-              />
+                className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-background bg-brand/20 text-sm font-bold text-brand"
+              >
+                {i}
+              </span>
             ))}
           </div>
-          <p className="text-sm text-gray-200">
-            <span className="font-semibold text-white">$3261863+</span> won by people like you
+          <p className="text-lg font-medium">
+            <MoneyCounter className="text-glow font-bold text-proof" /> won by people like you
           </p>
-          <BadgeCheck className="h-4 w-4 text-blue-400" />
+          <ProofBadge iconOnly className="[&_svg]:h-5 [&_svg]:w-5" />
         </div>
-        <div className="text-sm text-gray-300">
-          <span className="inline-flex items-center gap-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className="h-3.5 w-3.5 fill-brand text-brand" />
-            ))}
-            <span className="ml-1 font-semibold text-white">4.9/5</span>
-          </span>
-          <span className="mx-2 text-gray-600">|</span>
-          <span className="inline-flex items-center gap-1">
-            <BadgeCheck className="h-4 w-4 text-brand-bright" /> verified by Proof
-          </span>
+
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-3">
+            <div className="flex gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="flex h-6 w-6 items-center justify-center rounded bg-brand/90"
+                >
+                  <Star className="h-3.5 w-3.5 fill-background text-background" />
+                </span>
+              ))}
+            </div>
+            <span className="font-semibold">4.9/5</span>
+            <span className="h-4 w-px bg-border" />
+            <ProofBadge />
+          </div>
+          <p className="text-xs text-muted-foreground">*Works with Kalshi, Polymarket and more.</p>
+          <p className="text-xs text-muted-foreground">
+            Oddlytics never touches your money or wallet.*
+          </p>
         </div>
       </div>
-      <p className="text-center text-xs italic text-gray-600 sm:text-left">
-        *Works with Kalshi, Polymarket and more. Oddlytics never touches your money or wallet.*
-      </p>
     </div>
   );
 }

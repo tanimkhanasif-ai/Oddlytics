@@ -16,6 +16,11 @@ const config: Config = {
         violet: "var(--violet)",
         proof: "var(--proof)",
         "on-brand": "var(--on-brand)",
+        up: "var(--up)",
+        down: "var(--down)",
+        info: "var(--info)",
+        amber: "var(--amber)",
+        cyan: "var(--cyan)",
 
         // Product colours for the authenticated app — unchanged from before the
         // landing port, so app pages keep their original greens.
@@ -30,8 +35,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        // Archivo is opt-in via `font-display` (the landing page only); the rest
-        // of the app keeps the default system stack.
+        // Archivo is the product-wide typeface (landing design system).
+        sans: ["var(--font-archivo)", "ui-sans-serif", "system-ui", "sans-serif"],
         display: ["var(--font-archivo)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       borderRadius: {
