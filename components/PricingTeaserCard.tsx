@@ -7,7 +7,6 @@ const FEATURES = [
   "Daily high-conviction picks from our AI",
   "Live wallet tracking of top-performing traders",
   "Paper trading to refine your strategy risk-free",
-  "AI coaching to help you win more",
 ];
 
 /** Landing-page pricing teaser — links into /pricing for the actual checkout flow. */

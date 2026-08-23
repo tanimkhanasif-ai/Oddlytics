@@ -16,7 +16,6 @@ const PERKS = [
   ["Daily high-conviction picks", "from our AI"],
   ["Live wallet tracking", "of top-performing traders"],
   ["Paper trading", "to refine your strategy risk-free"],
-  ["AI coaching", "to help you win more"],
 ];
 
 /** Polls /api/subscription for up to ~10s waiting for the Paddle webhook to land. */

@@ -8,8 +8,6 @@ import {
   ShieldCheck,
   Star,
   CalendarDays,
-  User,
-  BarChart3,
   Bot,
   Lock,
   Check,
@@ -165,7 +163,6 @@ type Panel = {
   accent: string;
   trail?: string;
   sub: string;
-  tone: "green" | "violet";
   items: { icon: LucideIcon; heading: string; body: string; cta: string; href: string }[];
 };
 
@@ -174,7 +171,6 @@ const PANELS: Panel[] = [
     title: "Scan any market. Get your ",
     accent: "edge instantly.",
     sub: "Upload a screenshot from any prediction market and let AI do the heavy lifting.",
-    tone: "green",
     items: [
       {
         icon: Search,
@@ -196,7 +192,6 @@ const PANELS: Panel[] = [
     title: "Daily top picks, ",
     accent: "curated by AI.",
     sub: "Our AI scans the entire web to surface the highest-quality opportunities—so you can skip the noise and bet with confidence.",
-    tone: "green",
     items: [
       {
         icon: Star,
@@ -215,33 +210,9 @@ const PANELS: Panel[] = [
     ],
   },
   {
-    title: "Get ",
-    accent: "AI-powered coaching",
-    trail: " when you need it.",
-    sub: "Ask anything about markets, strategies, or your positions. Get answers backed by live data.",
-    tone: "violet",
-    items: [
-      {
-        icon: User,
-        heading: "Personal guidance, on demand",
-        body: "Whether it's position advice, risk management, or strategy breakdowns—our AI coach guides you step-by-step.",
-        cta: "Try AI Coach",
-        href: "/coach",
-      },
-      {
-        icon: BarChart3,
-        heading: "Built on live market data",
-        body: "Our coach analyzes real-time prices, trends, and your portfolio context to give you relevant guidance you can trust.",
-        cta: "See How It Works",
-        href: "/coach",
-      },
-    ],
-  },
-  {
     title: "Automate smarter. ",
     accent: "Let Copy Trading handle it.",
     sub: "Follow a real top Polymarket trader and let their strategy run automatically — with virtual money.",
-    tone: "green",
     items: [
       {
         icon: Bot,
@@ -265,60 +236,40 @@ export function Features() {
   return (
     <section id="features" className="relative px-6 py-20">
       <div className="mx-auto max-w-6xl space-y-8">
-        {PANELS.map((panel) => {
-          const violet = panel.tone === "violet";
-          return (
-            <article
-              key={panel.accent}
-              className={cn(
-                "reveal relative overflow-hidden rounded-3xl border p-8 md:p-10",
-                violet
-                  ? "border-violet/40 bg-[linear-gradient(140deg,oklch(0.16_0.06_300/0.7),oklch(0.09_0.02_300/0.9))] shadow-[var(--glow-violet)]"
-                  : "border-brand/35 bg-[linear-gradient(140deg,oklch(0.16_0.06_150/0.7),oklch(0.08_0.02_155/0.9))] shadow-[var(--glow-soft)]",
-              )}
-            >
-              <h3 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                {panel.title}
-                <span className={violet ? "text-violet" : "text-brand"}>{panel.accent}</span>
-                {panel.trail ?? ""}
-              </h3>
-              <p className="mt-2 max-w-3xl text-sm text-foreground/70 md:text-base">{panel.sub}</p>
+        {PANELS.map((panel) => (
+          <article
+            key={panel.accent}
+            className="reveal relative overflow-hidden rounded-3xl border border-brand/35 bg-[linear-gradient(140deg,oklch(0.16_0.06_150/0.7),oklch(0.08_0.02_155/0.9))] p-8 shadow-[var(--glow-soft)] md:p-10"
+          >
+            <h3 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              {panel.title}
+              <span className="text-brand">{panel.accent}</span>
+              {panel.trail ?? ""}
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm text-foreground/70 md:text-base">{panel.sub}</p>
 
-              <div className="mt-8 grid gap-8 md:grid-cols-2">
-                {panel.items.map((item) => (
-                  <div key={item.heading} className="flex gap-5">
-                    <span
-                      className={cn(
-                        "flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border",
-                        violet
-                          ? "border-violet/45 bg-violet/10 text-violet shadow-[var(--glow-violet)]"
-                          : "border-brand/45 bg-brand/10 text-brand shadow-[var(--glow-soft)]",
-                      )}
+            <div className="mt-8 grid gap-8 md:grid-cols-2">
+              {panel.items.map((item) => (
+                <div key={item.heading} className="flex gap-5">
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-brand/45 bg-brand/10 text-brand shadow-[var(--glow-soft)]">
+                    <item.icon className="h-8 w-8" strokeWidth={1.7} />
+                  </span>
+                  <div>
+                    <h4 className="text-lg font-bold text-foreground">{item.heading}</h4>
+                    <p className="mt-1.5 text-sm leading-relaxed text-foreground/70">{item.body}</p>
+                    <GlowButton
+                      href={item.href}
+                      size="sm"
+                      className="mt-4 border border-brand/50 bg-none font-semibold text-brand shadow-none hover:shadow-[var(--glow-brand)]"
                     >
-                      <item.icon className="h-8 w-8" strokeWidth={1.7} />
-                    </span>
-                    <div>
-                      <h4 className="text-lg font-bold text-foreground">{item.heading}</h4>
-                      <p className="mt-1.5 text-sm leading-relaxed text-foreground/70">{item.body}</p>
-                      <GlowButton
-                        href={item.href}
-                        size="sm"
-                        className={cn(
-                          "mt-4 border bg-none font-semibold shadow-none",
-                          violet
-                            ? "border-violet/50 text-violet hover:shadow-[var(--glow-violet)]"
-                            : "border-brand/50 text-brand hover:shadow-[var(--glow-brand)]",
-                        )}
-                      >
-                        {item.cta} <Arrow />
-                      </GlowButton>
-                    </div>
+                      {item.cta} <Arrow />
+                    </GlowButton>
                   </div>
-                ))}
-              </div>
-            </article>
-          );
-        })}
+                </div>
+              ))}
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );
@@ -330,7 +281,6 @@ const BENEFITS = [
   ["Daily high-conviction picks", "from our AI"],
   ["Live wallet tracking", "of top-performing traders"],
   ["Paper trading", "to refine your strategy risk-free"],
-  ["AI coaching", "to help you win more"],
 ];
 
 export function Pricing() {

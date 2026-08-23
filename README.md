@@ -6,8 +6,6 @@ Oddlytics helps you understand prediction-market questions on Polymarket and Kal
   reads a pasted screenshot), then returns a structured recommendation: a YES/NO call, a
   confidence score, reasons, key risks, suggested position sizing, and concrete take-profit /
   stop-loss / exit triggers.
-- **AI Coach** — a chat panel that explains prediction-market and trading concepts in plain
-  language, aware of whatever analysis is currently on screen.
 - **Paper Trading** — practice acting on a pick with virtual money only. Positions and balance are
   real database rows, scoped to your account.
 - **Handpicked Bets** — a curated, premium feed of picks behind a subscription paywall.
@@ -22,7 +20,7 @@ Oddlytics helps you understand prediction-market questions on Polymarket and Kal
 - **Pricing** / **Settings** — a pricing page driving the (mocked) checkout flow, and a settings
   page for your account (display name, subscription status, reset account data, log out).
 
-AI Analyzer / AI Coach and the paywall run on **mocked data** until you connect real keys (see
+AI Analyzer and the paywall run on **mocked data** until you connect real keys (see
 below). Wallet Tracker and Copy Trading are different: they call Polymarket's real, public,
 unauthenticated Data API directly — no key needed, no mocking, genuinely live trader data. Kalshi
 has no public trader-level API, so those two features are Polymarket-only.
@@ -72,10 +70,9 @@ since this dev environment can't reach the public internet to create one.
 
 With no `ANTHROPIC_API_KEY` and no Paddle keys set:
 
-- `/api/analyze` and `/api/coach` return realistic **mocked** responses matching the real output
-  schema, with a short artificial delay so it feels like a network call. Every mocked
-  `AnalysisResult` is flagged with `_mock: true` and the UI shows a "Demo data" badge on it; the
-  Coach panel shows a "Demo mode" note under its header once it's replied once.
+- `/api/analyze` returns a realistic **mocked** response matching the real output schema, with a
+  short artificial delay so it feels like a network call. Every mocked `AnalysisResult` is flagged
+  with `_mock: true` and the UI shows a "Demo data" badge on it.
 - The Handpicked Bets / Pricing paywall uses a **mocked checkout** (`/checkout/mock`) — a fake
   card form that never charges anything and just flips your subscription flag on submit.
 - The Sidebar shows a **Demo mode** / **Live** pill (from `GET /api/config`, AI-key state only) so
@@ -86,19 +83,19 @@ mocked, or vice versa.
 
 ## Connecting real data — step by step
 
-### 1. Anthropic (AI Analyzer + AI Coach)
+### 1. Anthropic (AI Analyzer + Handpicked Bets curation)
 
 1. Get an API key from the [Anthropic Console](https://console.anthropic.com/).
 2. In `.env.local`, set:
    ```
    ANTHROPIC_API_KEY=sk-ant-...
    ```
-3. Restart `npm run dev`. That's it — `app/api/analyze/route.ts` and `app/api/coach/route.ts` both
-   check `process.env.ANTHROPIC_API_KEY` and automatically switch from the mock path to the real
-   Claude call (look for the `// TODO: real Anthropic API call goes here` comment in each file —
-   the code is already written and wired, it's just inert without a key).
-4. Optional: override `ANALYSIS_MODEL` / `COACH_MODEL` in `.env.local` if you want a different
-   model than the default (`claude-sonnet-5`).
+3. Restart `npm run dev`. That's it — `app/api/analyze/route.ts` checks
+   `process.env.ANTHROPIC_API_KEY` and automatically switches from the mock path to the real
+   Claude call (look for the `// TODO: real Anthropic API call goes here` comment — the code is
+   already written and wired, it's just inert without a key).
+4. Optional: override `ANALYSIS_MODEL` in `.env.local` if you want a different model than the
+   default (`claude-sonnet-5`).
 
 ### 2. Paddle (Handpicked Bets + Pricing paywall)
 
@@ -205,8 +202,7 @@ app/
   pricing/page.tsx                  pricing page, drives the (mocked) checkout
   login/page.tsx, signup/page.tsx   email/password auth (bare chrome)
   dashboard/page.tsx                feature nav grid + portfolio/subscription/recent-analyses overview
-  analyzer/page.tsx                 AI Analyzer UI (live market + screenshot modes) + Coach panel
-  coach/page.tsx                    standalone AI Coach chat
+  analyzer/page.tsx                 AI Analyzer UI (live market + screenshot modes)
   paper-trading/page.tsx            virtual positions, P&L, manual position entry
   handpicked-bets/page.tsx          paywalled curated picks
   wallet-tracker/page.tsx           real Polymarket leaderboard + per-wallet trade history
@@ -216,7 +212,6 @@ app/
   api/auth/[...nextauth]/route.ts   NextAuth (login/session/logout)
   api/auth/register/route.ts        creates a user (bcrypt-hashed password)
   api/analyze/route.ts              mock-or-real Analysis Engine call (ANTHROPIC_API_KEY-gated)
-  api/coach/route.ts                mock-or-real AI Coach call (ANTHROPIC_API_KEY-gated)
   api/markets/resolve/route.ts      resolves a pasted URL/slug/ticker to live YES/NO prices
   api/traders/leaderboard/route.ts          real Polymarket trader leaderboard
   api/traders/[address]/trades/route.ts     real per-wallet trade history
@@ -235,7 +230,6 @@ components/
   Nav.tsx, Sidebar.tsx, ModeBadge.tsx   marketing topnav, in-app icon sidebar, live/demo indicator
   UrgencyBanner.tsx, SocialProofToast.tsx, ExitIntentModal.tsx, ProfitCalculator.tsx, FaqAccordion.tsx
   AnalysisResultView.tsx            renders a structured analysis + "paper trade this pick"
-  CoachChat.tsx                     chat widget for the AI Coach
 lib/
   prompts.ts                        the two system prompts, verbatim
   types.ts                          shared TypeScript types
@@ -247,7 +241,6 @@ lib/
   markets/kalshi.ts                 Kalshi Trade API v2 client
   markets/polymarketTraders.ts      real Polymarket Data API client (leaderboard + trades)
   mocks/analysis.ts                 mock AnalysisResult generator
-  mocks/coach.ts                    mock Coach reply generator
   mocks/handpicks.ts                static curated mock picks
   mocks/priceSimulator.ts           deterministic price drift for open paper positions
   hooks/usePaperTrading.ts          fetches /api/paper-trading
@@ -272,9 +265,8 @@ middleware.ts                       redirects unauthenticated visitors to /login
 | `NEXTAUTH_URL`           | **yes**  | —                    | e.g. `http://localhost:3000` locally |
 | `DATABASE_URL`           | **yes**  | —                    | Postgres connection string — Neon's **pooled** one |
 | `DIRECT_URL`             | **yes**  | —                    | Same database, Neon's **direct** (non-pooled) string; used by migrations |
-| `ANTHROPIC_API_KEY`      | no       | unset (mocked)       | Real AI Analyzer + AI Coach       |
+| `ANTHROPIC_API_KEY`      | no       | unset (mocked)       | Real AI Analyzer + Handpicked Bets curation |
 | `ANALYSIS_MODEL`         | no       | `claude-sonnet-5`    | —                                  |
-| `COACH_MODEL`            | no       | `claude-sonnet-5`    | —                                  |
 | `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` | no | unset (mocked)  | Real Paddle.js overlay checkout    |
 | `NEXT_PUBLIC_PADDLE_PRICE_ID`     | no | unset (mocked)  | Real Paddle.js overlay checkout    |
 | `NEXT_PUBLIC_PADDLE_ENV`          | no | `sandbox`       | `sandbox` or `production`          |

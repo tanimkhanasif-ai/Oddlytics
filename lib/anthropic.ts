@@ -14,4 +14,3 @@ export function getAnthropicClient(): Anthropic {
 }
 
 export const ANALYSIS_MODEL = process.env.ANALYSIS_MODEL || "claude-sonnet-5";
-export const COACH_MODEL = process.env.COACH_MODEL || "claude-sonnet-5";

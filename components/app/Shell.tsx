@@ -12,7 +12,6 @@ import {
   Users,
   Settings,
   Crown,
-  MessageCircle,
   LifeBuoy,
   Zap,
   X,
@@ -35,7 +34,6 @@ const TITLES: Record<string, { title: string; icon: LucideIcon }> = {
   "/copy-trading": { title: "Copy Trading", icon: Users },
   "/settings": { title: "Settings", icon: Settings },
   "/pricing": { title: "Go Premium", icon: Crown },
-  "/coach": { title: "AI Coach", icon: MessageCircle },
   "/help": { title: "Help & Support", icon: LifeBuoy },
 };
 
