@@ -16,6 +16,8 @@ export function GlowButton({
   seesaw = false,
   href,
   onClick,
+  type = "button",
+  disabled = false,
 }: {
   children: ReactNode;
   className?: string;
@@ -24,6 +26,8 @@ export function GlowButton({
   seesaw?: boolean;
   href?: string;
   onClick?: () => void;
+  type?: "button" | "submit";
+  disabled?: boolean;
 }) {
   const [shining, setShining] = useState(false);
   const [rocking, setRocking] = useState(false);
@@ -83,12 +87,13 @@ export function GlowButton({
 
   return (
     <button
-      type="button"
+      type={type}
+      disabled={disabled}
       onClick={() => {
         fire();
         onClick?.();
       }}
-      className={classes}
+      className={cn(classes, disabled && "cursor-not-allowed opacity-50")}
     >
       {inner}
     </button>
