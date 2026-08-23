@@ -4,7 +4,12 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // The app runs on Neon's pooled connection (serverless opens a lot of short
+  // connections). Migrations can't go through the pooler — PgBouncer in
+  // transaction mode can't run them — so `prisma migrate deploy` uses the
+  // direct connection instead. Locally both can point at the same database.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {

@@ -54,7 +54,11 @@ Open http://localhost:3000, click **Sign up**, and you're in.
 ### Setting up a database (Neon)
 
 1. Create a free project at [neon.tech](https://neon.tech).
-2. Copy its connection string into `DATABASE_URL` in both `.env` and `.env.local`.
+2. Neon shows **two** connection strings for the same database. Copy the **pooled** one
+   (hostname contains `-pooler`) into `DATABASE_URL`, and the **direct** one into `DIRECT_URL`,
+   in both `.env` and `.env.local`. The app uses the pooled connection; Prisma migrations use the
+   direct one, because they can't run through a connection pooler. On plain local Postgres, point
+   both at the same string.
 3. Run `npx prisma migrate deploy` (or `npx prisma migrate dev` in development) to create the
    tables. The schema lives in `prisma/schema.prisma`; the actual migration SQL is already
    committed in `prisma/migrations/`, so you don't need to generate it yourself.
@@ -266,7 +270,8 @@ middleware.ts                       redirects unauthenticated visitors to /login
 | ------------------------ | -------- | ------------------- | --------------------------------- |
 | `NEXTAUTH_SECRET`        | **yes**  | —                    | Session signing — the app won't start meaningfully without it |
 | `NEXTAUTH_URL`           | **yes**  | —                    | e.g. `http://localhost:3000` locally |
-| `DATABASE_URL`           | **yes**  | —                    | Postgres connection string (e.g. Neon) |
+| `DATABASE_URL`           | **yes**  | —                    | Postgres connection string — Neon's **pooled** one |
+| `DIRECT_URL`             | **yes**  | —                    | Same database, Neon's **direct** (non-pooled) string; used by migrations |
 | `ANTHROPIC_API_KEY`      | no       | unset (mocked)       | Real AI Analyzer + AI Coach       |
 | `ANALYSIS_MODEL`         | no       | `claude-sonnet-5`    | —                                  |
 | `COACH_MODEL`            | no       | `claude-sonnet-5`    | —                                  |
