@@ -12,9 +12,10 @@ export async function GET() {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const picks = await getCurrentPicks();
 
-  // Non-subscribers get a taste: the first three, without the full reasoning.
-  const visible = user?.subscribed ? picks : picks.slice(0, 3);
-  const payload = visible.map((p) => ({
+  // Non-subscribers get the full week's grid so the blurred preview behind the
+  // paywall looks like the real thing — but never the AI reasoning, which is
+  // the part they're actually paying for.
+  const payload = picks.map((p) => ({
     id: p.id,
     rank: p.rank,
     platform: p.platform,
@@ -30,7 +31,6 @@ export async function GET() {
 
   return NextResponse.json({
     picks: payload,
-    lockedCount: user?.subscribed ? 0 : Math.max(0, picks.length - visible.length),
     subscribed: !!user?.subscribed,
     nextRefresh: nextWeekStart().toISOString(),
     minConfidence: MIN_CONFIDENCE,

@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { Wallet, ArrowLeftRight, ChevronDown, Plus } from "lucide-react";
-import { GlowButton } from "@/components/landing/primitives";
+import { Wallet, ArrowLeftRight, ChevronDown } from "lucide-react";
+import FeatureGate from "@/components/FeatureGate";
+import PlatformBadge from "@/components/PlatformBadge";
 import { useCopyTrading } from "@/lib/hooks/useCopyTrading";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
-import { useSubscription } from "@/lib/hooks/useSubscription";
-import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
 import type { TopTrader } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
@@ -34,9 +31,14 @@ function initialsFor(name: string): string {
 }
 
 export default function CopyTradingPage() {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const { subscribed, hydrated: subHydrated, refresh } = useSubscription();
+  return (
+    <FeatureGate ctaLabel="Set up copytrading">
+      <CopyTrading />
+    </FeatureGate>
+  );
+}
+
+function CopyTrading() {
   const { cashUsd, positions } = usePaperTrading();
   const { follows, hydrated, feed, follow, unfollow, syncNow, syncing } = useCopyTrading();
 
@@ -44,7 +46,6 @@ export default function CopyTradingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/traders/leaderboard?period=WEEK&limit=12")
@@ -62,24 +63,6 @@ export default function CopyTradingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
-  const { openCheckout } = usePaddleCheckout(refresh);
-
-  function startCheckout() {
-    if (!session?.user?.id) {
-      router.push("/login?callbackUrl=/copy-trading");
-      return;
-    }
-    if (paddleConfigured) {
-      setCheckoutLoading(true);
-      const opened = openCheckout(session.user.id);
-      setCheckoutLoading(false);
-      if (opened) return;
-    }
-    router.push("/checkout/mock?redirect=/copy-trading");
-  }
-
-  if (!subHydrated) return null;
-
   // Real P&L across positions that Copy Trading actually opened for this user.
   const mirroredPnl = positions
     .filter((p) => p.source === "copy-trading")
@@ -90,8 +73,6 @@ export default function CopyTradingPage() {
           : simulateCurrentPrice(p.id, p.entryPrice, p.openedAt);
       return sum + ((p.sizeUsd / p.entryPrice) * price - p.sizeUsd);
     }, 0);
-  const free = subscribed ? traders : traders.slice(0, 2);
-  const locked = subscribed ? [] : traders.slice(2);
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -142,7 +123,7 @@ export default function CopyTradingPage() {
         {!loading && !error && (
           <>
             <div className="mt-3 divide-y divide-border">
-              {free.map((t, i) => (
+              {traders.map((t, i) => (
                 <TraderRow
                   key={t.walletAddress}
                   trader={t}
@@ -155,29 +136,6 @@ export default function CopyTradingPage() {
               ))}
             </div>
 
-            {locked.length > 0 && (
-              <div className="relative">
-                <div className="locked-blur divide-y divide-border">
-                  {locked.map((t, i) => (
-                    <TraderRow
-                      key={t.walletAddress}
-                      trader={t}
-                      index={i + 2}
-                      following={false}
-                      onFollow={() => {}}
-                      onUnfollow={() => {}}
-                      disabled
-                    />
-                  ))}
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center bg-background/25">
-                  <GlowButton onClick={startCheckout} className="px-7 py-4 text-lg">
-                    <Plus className="h-5 w-5" />
-                    {checkoutLoading ? "Opening checkout…" : "Set up copytrading"}
-                  </GlowButton>
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>
@@ -223,6 +181,9 @@ export default function CopyTradingPage() {
           <div className="mt-3 divide-y divide-border">
             {feed.map((e, i) => (
               <div key={i} className="py-3 text-sm">
+                <div className="mb-1.5 flex items-center gap-2">
+                  <PlatformBadge platform="polymarket" size="xs" />
+                </div>
                 <p className="text-foreground/90">
                   Mirrored {e.outcome ?? "a position"} on{" "}
                   <span className="text-muted-foreground">{e.question}</span> —{" "}

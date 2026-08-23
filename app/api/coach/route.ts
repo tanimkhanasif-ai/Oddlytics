@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireSubscriber } from "@/lib/session";
 import { getAnthropicClient, COACH_MODEL } from "@/lib/anthropic";
 import { AI_COACH_SYSTEM_PROMPT } from "@/lib/prompts";
 import { generateMockCoachReply } from "@/lib/mocks/coach";
@@ -17,6 +18,9 @@ function delay(ms: number) {
 }
 
 export async function POST(req: NextRequest) {
+  const access = await requireSubscriber();
+  if (!access.ok) return access.response;
+
   const body = await req.json().catch(() => null);
   const messages = body?.messages;
   const context: AnalysisResult | null = body?.context ?? null;

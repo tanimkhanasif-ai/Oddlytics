@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireSubscriber } from "@/lib/session";
 import type Anthropic from "@anthropic-ai/sdk";
 import { getAnthropicClient, ANALYSIS_MODEL } from "@/lib/anthropic";
 import { ANALYSIS_ENGINE_SYSTEM_PROMPT } from "@/lib/prompts";
@@ -35,6 +36,9 @@ function delay(ms: number) {
 }
 
 export async function POST(req: NextRequest) {
+  const access = await requireSubscriber();
+  if (!access.ok) return access.response;
+
   const body = await req.json().catch(() => null);
   if (!body) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });

@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { BookmarkCheck, Lock, TrendingUp } from "lucide-react";
+import { BookmarkCheck, TrendingUp } from "lucide-react";
 import AnalysisResultView from "@/components/AnalysisResultView";
-import { GlowButton } from "@/components/landing/primitives";
-import { useSubscription } from "@/lib/hooks/useSubscription";
-import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
+import FeatureGate from "@/components/FeatureGate";
+import PlatformBadge from "@/components/PlatformBadge";
 import type { AnalysisResult } from "@/lib/types";
 
 interface Pick {
@@ -56,17 +53,19 @@ function useCountdownTo(iso: string | null) {
 }
 
 export default function HandpickedBetsPage() {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const { subscribed, hydrated, refresh } = useSubscription();
+  return (
+    <FeatureGate ctaLabel="Unlock handpicked bets">
+      <HandpickedBets />
+    </FeatureGate>
+  );
+}
 
+function HandpickedBets() {
   const [picks, setPicks] = useState<Pick[]>([]);
-  const [lockedCount, setLockedCount] = useState(0);
   const [nextRefresh, setNextRefresh] = useState<string | null>(null);
   const [minConfidence, setMinConfidence] = useState(70);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const countdown = useCountdownTo(nextRefresh);
 
@@ -75,31 +74,12 @@ export default function HandpickedBetsPage() {
       .then((r) => r.json())
       .then((d) => {
         setPicks(d.picks ?? []);
-        setLockedCount(d.lockedCount ?? 0);
         setNextRefresh(d.nextRefresh ?? null);
         if (typeof d.minConfidence === "number") setMinConfidence(d.minConfidence);
       })
       .catch(() => setPicks([]))
       .finally(() => setLoading(false));
-  }, [subscribed]);
-
-  const { openCheckout } = usePaddleCheckout(refresh);
-
-  function startCheckout() {
-    if (!session?.user?.id) {
-      router.push("/login?callbackUrl=/handpicked-bets");
-      return;
-    }
-    if (paddleConfigured) {
-      setCheckoutLoading(true);
-      const opened = openCheckout(session.user.id);
-      setCheckoutLoading(false);
-      if (opened) return;
-    }
-    router.push("/checkout/mock?redirect=/handpicked-bets");
-  }
-
-  if (!hydrated) return null;
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -128,36 +108,16 @@ export default function HandpickedBetsPage() {
           </p>
         </div>
       ) : (
-        <>
-          <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {picks.map((p) => (
-              <PickCard
-                key={p.id}
-                pick={p}
-                expanded={expanded === p.id}
-                onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
-              />
-            ))}
-          </div>
-
-          {lockedCount > 0 && (
-            <div className="glass-panel flex flex-col items-center rounded-3xl px-6 py-10 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-brand/40 bg-brand/[0.12]">
-                <Lock className="h-5 w-5 text-brand" />
-              </span>
-              <h3 className="mt-4 text-xl font-bold text-foreground">
-                {lockedCount} more pick{lockedCount === 1 ? "" : "s"} this week
-              </h3>
-              <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-                Full access unlocks every pick plus the AI&apos;s reasoning, risks and exit plan on
-                each one.
-              </p>
-              <GlowButton onClick={startCheckout} className="mt-5 px-6 py-3">
-                {checkoutLoading ? "Opening checkout…" : "Unlock all picks"}
-              </GlowButton>
-            </div>
-          )}
-        </>
+        <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {picks.map((p) => (
+            <PickCard
+              key={p.id}
+              pick={p}
+              expanded={expanded === p.id}
+              onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
@@ -172,7 +132,6 @@ function PickCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const isPoly = pick.platform === "polymarket";
   const yes = pick.side === "YES";
   const edgePositive = pick.edge > 0;
 
@@ -182,16 +141,7 @@ function PickCard({
         <span className="flex h-6 w-6 items-center justify-center rounded bg-brand/20 text-[10px] font-bold text-brand">
           {pick.rank}
         </span>
-        <span
-          className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${
-            isPoly ? "bg-violet/25 text-violet" : "bg-info/25 text-info"
-          }`}
-        >
-          {isPoly ? "P" : "K"}
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {isPoly ? "Polymarket" : "Kalshi"}
-        </span>
+        <PlatformBadge platform={pick.platform} size="xs" />
         <span
           className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${
             yes ? "bg-up/20 text-up" : "bg-down/20 text-down"

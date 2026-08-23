@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUserId } from "@/lib/session";
+import { requireUserId, requireSubscriber } from "@/lib/session";
 import { fetchTraderTrades } from "@/lib/markets/polymarketTraders";
 
 export const runtime = "nodejs";
@@ -19,8 +19,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const userId = await requireUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Writes are the paid half of these features — reads stay open so the
+  // blurred preview behind the paywall still has something to show.
+  const access = await requireSubscriber();
+  if (!access.ok) return access.response;
+  const userId = access.userId;
 
   const body = await req.json().catch(() => null);
 

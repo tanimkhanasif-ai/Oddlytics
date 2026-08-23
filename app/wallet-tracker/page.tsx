@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { Wallet, Lock, ChevronDown } from "lucide-react";
-import { GlowButton } from "@/components/landing/primitives";
+import { Wallet, ChevronDown } from "lucide-react";
+import FeatureGate from "@/components/FeatureGate";
+import PlatformBadge from "@/components/PlatformBadge";
 import { Sparkline } from "@/components/app/Sparkline";
 import { useTrackedWallets } from "@/lib/hooks/useTrackedWallets";
-import { useSubscription } from "@/lib/hooks/useSubscription";
-import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
 import type { TopTrader, TraderTrade } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
 
@@ -41,9 +38,14 @@ const series = (up: boolean, seed: number) =>
   });
 
 export default function WalletTrackerPage() {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const { subscribed, hydrated: subHydrated, refresh } = useSubscription();
+  return (
+    <FeatureGate ctaLabel="Set up wallet tracking">
+      <WalletTracker />
+    </FeatureGate>
+  );
+}
+
+function WalletTracker() {
   const { isTracked, track, untrack, hydrated } = useTrackedWallets();
 
   const [period, setPeriod] = useState<Period>("WEEK");
@@ -51,7 +53,6 @@ export default function WalletTrackerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -65,27 +66,6 @@ export default function WalletTrackerPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load leaderboard."))
       .finally(() => setLoading(false));
   }, [period]);
-
-  const { openCheckout } = usePaddleCheckout(refresh);
-
-  function startCheckout() {
-    if (!session?.user?.id) {
-      router.push("/login?callbackUrl=/wallet-tracker");
-      return;
-    }
-    if (paddleConfigured) {
-      setCheckoutLoading(true);
-      const opened = openCheckout(session.user.id);
-      setCheckoutLoading(false);
-      if (opened) return;
-    }
-    router.push("/checkout/mock?redirect=/wallet-tracker");
-  }
-
-  if (!subHydrated) return null;
-
-  const free = subscribed ? traders : traders.slice(0, 3);
-  const locked = subscribed ? [] : traders.slice(3);
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -135,7 +115,7 @@ export default function WalletTrackerPage() {
         {!loading && !error && traders.length > 0 && (
           <>
             <div className="divide-y divide-border">
-              {free.map((t, i) => (
+              {traders.map((t, i) => (
                 <WalletRow
                   key={t.walletAddress}
                   trader={t}
@@ -156,33 +136,6 @@ export default function WalletTrackerPage() {
               ))}
             </div>
 
-            {locked.length > 0 && (
-              <div className="relative">
-                <div className="locked-blur divide-y divide-border">
-                  {locked.map((t, i) => (
-                    <WalletRow
-                      key={t.walletAddress}
-                      trader={t}
-                      index={i + 3}
-                      period={period}
-                      tracked={false}
-                      onToggleTrack={() => {}}
-                      expanded={false}
-                      onToggleExpand={() => {}}
-                      disabled
-                    />
-                  ))}
-                </div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/30 backdrop-blur-[2px]">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-brand/40 bg-brand/[0.12]">
-                    <Lock className="h-5 w-5 text-brand" />
-                  </span>
-                  <GlowButton onClick={startCheckout} className="px-6 py-3">
-                    {checkoutLoading ? "Opening checkout…" : "Upgrade to unlock"}
-                  </GlowButton>
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>
@@ -280,12 +233,22 @@ function TradesPanel({ address }: { address: string }) {
     <div className="space-y-2 pb-4">
       {trades.map((t, i) => (
         <div key={i} className="rounded-xl border border-border bg-background/40 p-3 text-xs">
-          <p className="text-foreground/90">
-            {t.side} {t.outcome} — {t.question ?? t.market}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <PlatformBadge platform="polymarket" size="xs" />
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                t.side === "SELL" ? "bg-down/20 text-down" : "bg-up/20 text-up"
+              }`}
+            >
+              {t.side ?? "TRADE"} {t.outcome ?? ""}
+            </span>
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              {new Date(t.timestampMs).toLocaleString()}
+            </span>
+          </div>
+          <p className="mt-2 text-foreground/90">{t.question ?? t.market}</p>
           <p className="mt-0.5 text-muted-foreground">
-            {formatUsd(t.size)} @ {(t.price * 100).toFixed(0)}¢ ·{" "}
-            {new Date(t.timestampMs).toLocaleString()}
+            {formatUsd(t.size)} @ {(t.price * 100).toFixed(0)}¢
           </p>
         </div>
       ))}

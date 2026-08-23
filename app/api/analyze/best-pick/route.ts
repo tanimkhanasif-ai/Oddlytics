@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireSubscriber } from "@/lib/session";
 import { fetchTrendingMarkets } from "@/lib/markets/topMarkets";
 import { analyzeLiveMarket } from "@/lib/analyzeMarket";
 import type { AnalysisResult } from "@/lib/types";
@@ -10,6 +11,9 @@ export const runtime = "nodejs";
  * the same analyze pipeline as a single-market request, returning the highest-confidence pick.
  */
 export async function POST(req: NextRequest) {
+  const access = await requireSubscriber();
+  if (!access.ok) return access.response;
+
   const body = await req.json().catch(() => ({}));
   const capitalUsd = typeof body?.capitalUsd === "number" ? body.capitalUsd : undefined;
 

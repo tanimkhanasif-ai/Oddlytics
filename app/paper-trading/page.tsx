@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { Wallet, Plus, ChevronDown, Star, Lock } from "lucide-react";
+import { Wallet, Plus, ChevronDown, Star } from "lucide-react";
+import FeatureGate from "@/components/FeatureGate";
+import PlatformBadge from "@/components/PlatformBadge";
 import { Sparkline } from "@/components/app/Sparkline";
 import { GlowButton } from "@/components/landing/primitives";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
-import { useSubscription } from "@/lib/hooks/useSubscription";
-import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
 import type { TrendingMarket } from "@/lib/markets/topMarkets";
 import type { PaperPosition, Platform } from "@/lib/types";
@@ -21,12 +19,23 @@ const series = (up: boolean, seed: number) =>
     return (up ? i * 6 : -i * 6) + wave + 50;
   });
 
+function compactUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1).replace(/\.0$/, "")}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1e3) return `$${Math.round(n / 1e3)}K`;
+  return `$${Math.round(n)}`;
+}
+
 export default function PaperTradingPage() {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const { subscribed, hydrated: subHydrated, refresh } = useSubscription();
+  return (
+    <FeatureGate ctaLabel="Start virtual trading">
+      <PaperTrading />
+    </FeatureGate>
+  );
+}
+
+function PaperTrading() {
   const { cashUsd, positions, hydrated, openPosition, closePosition } = usePaperTrading();
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const [markets, setMarkets] = useState<TrendingMarket[]>([]);
   const [tradeOpen, setTradeOpen] = useState(false);
@@ -39,22 +48,6 @@ export default function PaperTradingPage() {
       .catch(() => setMarkets([]));
   }, []);
 
-  const { openCheckout } = usePaddleCheckout(refresh);
-
-  function startCheckout() {
-    if (!session?.user?.id) {
-      router.push("/login?callbackUrl=/paper-trading");
-      return;
-    }
-    if (paddleConfigured) {
-      setCheckoutLoading(true);
-      const opened = openCheckout(session.user.id);
-      setCheckoutLoading(false);
-      if (opened) return;
-    }
-    router.push("/checkout/mock?redirect=/paper-trading");
-  }
-
   const openPositions = positions.filter((p) => p.status === "open");
 
   const unrealizedPnl = useMemo(
@@ -66,11 +59,8 @@ export default function PaperTradingPage() {
     [openPositions],
   );
 
-  if (!hydrated || !subHydrated) return null;
+  if (!hydrated) return null;
 
-  // Non-subscribers get a preview of the first three markets; the rest sit behind the lock.
-  const free = subscribed ? markets : markets.slice(0, 3);
-  const locked = subscribed ? [] : markets.slice(3);
   const pnlUp = unrealizedPnl >= 0;
 
   return (
@@ -138,7 +128,7 @@ export default function PaperTradingPage() {
         ) : (
           <>
             <div className="mt-4 divide-y divide-border">
-              {free.map((m, i) => (
+              {markets.map((m, i) => (
                 <MarketRow
                   key={`${m.platform}-${m.id}`}
                   market={m}
@@ -151,23 +141,6 @@ export default function PaperTradingPage() {
               ))}
             </div>
 
-            {locked.length > 0 && (
-              <div className="relative">
-                <div className="locked-blur divide-y divide-border">
-                  {locked.map((m, i) => (
-                    <MarketRow key={`${m.platform}-${m.id}`} market={m} i={i + 3} onPick={() => {}} />
-                  ))}
-                </div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/30 backdrop-blur-[2px]">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full border border-brand/40 bg-brand/[0.12]">
-                    <Lock className="h-5 w-5 text-brand" />
-                  </span>
-                  <GlowButton size="sm" onClick={startCheckout}>
-                    {checkoutLoading ? "Opening checkout…" : "Upgrade to unlock"}
-                  </GlowButton>
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>
@@ -209,14 +182,14 @@ function MarketRow({
       onClick={onPick}
       className="flex w-full items-center gap-4 py-3.5 text-left transition-colors duration-200 hover:bg-foreground/[0.03]"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-foreground/5 text-xs font-bold text-brand">
-        {market.platform === "polymarket" ? "P" : "K"}
-      </span>
       <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center gap-2">
+          <PlatformBadge platform={market.platform} size="xs" />
+          <span className="text-[10px] text-muted-foreground">
+            Vol. {compactUsd(market.volumeUsd)}
+          </span>
+        </div>
         <p className="truncate text-sm font-medium text-foreground">{market.question}</p>
-        <p className="text-xs text-muted-foreground">
-          Vol. ${Math.round(market.volumeUsd / 1000).toLocaleString("en-US")}K
-        </p>
       </div>
       <span className={`text-sm font-semibold ${up ? "text-up" : "text-down"}`}>
         {up ? "+" : ""}
@@ -241,9 +214,12 @@ function PositionRow({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 py-3.5">
       <div className="min-w-0">
+        <div className="mb-1">
+          <PlatformBadge platform={position.platform} size="xs" />
+        </div>
         <p className="truncate text-sm font-medium text-foreground">{position.marketQuestion}</p>
         <p className="text-xs text-muted-foreground">
-          {position.platform} · {position.side} @ {(position.entryPrice * 100).toFixed(0)}¢ ·{" "}
+          {position.side} @ {(position.entryPrice * 100).toFixed(0)}¢ ·{" "}
           {formatUsd(position.sizeUsd)}
           {position.source === "copy-trading" && " · via Copy Trading"}
         </p>
