@@ -155,6 +155,44 @@ data, no auth, nothing to configure. Two things worth knowing:
   blockchain like Polymarket), so there was nothing honest to build there — these two features
   cover Polymarket only rather than filling the gap with scraped or fabricated Kalshi data.
 
+### 5. Weekly Handpicked Bets (needs `CRON_SECRET`)
+
+Handpicked Bets is a *cached weekly set*, not a live scan on every page load. Once a week a cron
+job scans live markets, runs each one through the same analyzer the AI Predictor uses, and stores
+the strongest picks; the page just reads those rows.
+
+How the picks are chosen (`lib/handpicks.ts`):
+
+1. Fetch the top ~40 markets by volume across Polymarket and Kalshi.
+2. Analyze each one (in batches of 5) to get a YES/NO call and a confidence score.
+3. Keep only the ones the AI is **at least 70% confident** on.
+4. Rank by **edge**, not raw confidence, and publish the top 10.
+
+Step 4 is the part worth understanding. A market trading at 90c is already saying "90% likely", so
+an AI that's 90% confident on it has found nothing — it just agrees with the price. *Edge* is
+`AI confidence − market-implied probability`, i.e. how far the AI's read sits above what you're
+being asked to pay. Each card shows all three numbers (AI / Market / Edge) so a high-confidence,
+zero-edge pick is visibly different from a real disagreement. High confidence is not the same thing
+as a good bet, and the UI doesn't pretend otherwise.
+
+To turn it on:
+
+1. Generate a secret: `openssl rand -hex 32`.
+2. Add it as `CRON_SECRET` in Vercel (Production + Preview) and redeploy.
+3. `vercel.json` already registers the schedule — `/api/cron/handpicks` every Monday at 06:00 UTC.
+   Vercel sends the `Authorization: Bearer <CRON_SECRET>` header automatically.
+
+Until `CRON_SECRET` is set the endpoint returns 501 and refuses to run, so nobody can trigger paid
+analysis runs from the outside. To publish the first set without waiting for Monday, call it by
+hand once after deploying:
+
+```bash
+curl -H "authorization: Bearer $CRON_SECRET" https://<your-domain>/api/cron/handpicks
+```
+
+Non-subscribers see the first 3 picks with the reasoning hidden; subscribers see all 10 with the
+full analysis, risks and exit plan.
+
 ## Project layout
 
 ```
@@ -237,6 +275,7 @@ middleware.ts                       redirects unauthenticated visitors to /login
 | `NEXT_PUBLIC_PADDLE_ENV`          | no | `sandbox`       | `sandbox` or `production`          |
 | `PADDLE_API_KEY`         | no       | unset (webhook disabled) | Webhook signature verification |
 | `PADDLE_WEBHOOK_SECRET`  | no       | unset (webhook disabled) | Webhook signature verification |
+| `CRON_SECRET`            | no       | unset (cron disabled)    | Weekly Handpicked Bets curation run |
 
 ## Deploying to Vercel
 
@@ -253,7 +292,9 @@ middleware.ts                       redirects unauthenticated visitors to /login
 4. Once the real domain exists, register `https://<your-domain>/api/paddle/webhook` as a Paddle
    notification destination and set `PADDLE_WEBHOOK_SECRET` from the value Paddle gives you, then
    redeploy (env var changes need a new deploy to take effect).
-5. Verify: sign up, run a real AI Analyzer query, run a sandbox Paddle checkout, and confirm
+5. Set `CRON_SECRET` and trigger `/api/cron/handpicks` once by hand so Handpicked Bets has a
+   published set before the first Monday run (see "Weekly Handpicked Bets" above).
+6. Verify: sign up, run a real AI Analyzer query, run a sandbox Paddle checkout, and confirm
    `/settings` shows the subscription as active once the webhook lands.
 
 ## Persistence

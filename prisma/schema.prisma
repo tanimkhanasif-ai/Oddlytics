@@ -8,15 +8,15 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  passwordHash     String
-  name             String?
-  createdAt        DateTime @default(now())
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
 
-  cashUsd          Float    @default(100000)
-  subscribed       Boolean  @default(false)
-  paddleCustomerId String?  @unique
+  cashUsd          Float   @default(100000)
+  subscribed       Boolean @default(false)
+  paddleCustomerId String? @unique
 
   positions      PaperPosition[]
   trackedWallets TrackedWallet[]
@@ -90,4 +90,31 @@ model AnalysisRecord {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+/// One AI-curated pick, cached so every subscriber sees the same weekly set
+/// instead of re-running (and re-paying for) analysis on each page view.
+model HandpickedPick {
+  id         String   @id @default(cuid())
+  weekOf     DateTime
+  rank       Int
+  platform   String
+  marketId   String
+  question   String
+  url        String?
+  /// The side the AI backs, and how sure it is.
+  side       String
+  confidence Float
+  /// Market-implied probability for that side at curation time, and the gap
+  /// between the AI's confidence and it. Positive edge = AI thinks the market
+  /// is underpricing this outcome.
+  marketPct  Float
+  edge       Float
+  volumeUsd  Float
+  /// Full AnalysisResult so the card can expand without another API call.
+  analysis   Json
+  createdAt  DateTime @default(now())
+
+  @@unique([weekOf, platform, marketId])
+  @@index([weekOf, rank])
 }
