@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wallet, ArrowLeftRight, ChevronDown } from "lucide-react";
+import { Wallet, ChevronDown } from "lucide-react";
 import FeatureGate from "@/components/FeatureGate";
 import PlatformBadge from "@/components/PlatformBadge";
 import { useCopyTrading } from "@/lib/hooks/useCopyTrading";
@@ -63,7 +63,6 @@ function CopyTrading() {
   const [traders, setTraders] = useState<TopTrader[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const [kalshiMarkets, setKalshiMarkets] = useState<TrendingMarket[]>([]);
@@ -136,18 +135,6 @@ function CopyTrading() {
         </div>
       </div>
 
-      <button
-        onClick={() => setPickerOpen((o) => !o)}
-        className="ghost-button w-full justify-between px-5 py-4 text-base font-medium"
-      >
-        <span className="flex items-center gap-3">
-          <ArrowLeftRight className="h-4 w-4 text-brand" /> Select Trader
-        </span>
-        <ChevronDown
-          className={`h-4 w-4 transition-transform duration-200 ${pickerOpen ? "rotate-180" : ""}`}
-        />
-      </button>
-
       <PasteWalletFollow
         follows={follows}
         onFollow={follow}
@@ -160,10 +147,6 @@ function CopyTrading() {
           <h2 className="font-semibold text-foreground">Top 25 traders</h2>
           <PlatformBadge platform="polymarket" size="xs" />
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Real, live Polymarket leaderboard data. Kalshi accounts are private and have no public
-          trader API, so Copy Trading can only offer real traders from Polymarket.
-        </p>
 
         {loading && <p className="mt-3 text-sm text-muted-foreground">Loading leaderboard…</p>}
         {error && (
@@ -232,10 +215,7 @@ function CopyTrading() {
       )}
 
       <div className="glass-panel overflow-hidden rounded-3xl p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-foreground">Kalshi markets</h2>
-          <PlatformBadge platform="kalshi" size="xs" />
-        </div>
+        <h2 className="font-semibold text-foreground">Kalshi markets</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           Kalshi has no public trader data to copy, so follow a real live Kalshi market instead —
           the AI mirrors its own read into a virtual paper trade whenever it clears a 70%+
@@ -344,7 +324,7 @@ function PasteWalletFollow({
       <h2 className="font-semibold text-foreground">Or paste any Polymarket wallet</h2>
       <p className="mt-1 text-xs text-muted-foreground">
         Not just the leaderboard — copy any real Polymarket wallet by pasting its address, and see
-        its live trades from the last 24h.
+        its live trades.
       </p>
       <div className="mt-3 flex gap-2">
         <input
