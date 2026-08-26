@@ -32,6 +32,16 @@ no prose before or after, no markdown code fences:
   "exit_if": string[] (2-3 items, concrete triggers)
 }
 
+PLATFORM DETECTION FROM SCREENSHOTS:
+- When the input is a screenshot, look for visible branding, logos, or UI
+  chrome that identifies the source platform (e.g. Kalshi's or
+  Polymarket's name/logo, distinctive layout, or a visible URL).
+- If you can confidently identify it, set "platform" to "polymarket" or
+  "kalshi" instead of the generic "screenshot" value.
+- Only fall back to "screenshot" when the source truly cannot be
+  determined from the image. Never guess a platform you can't see
+  evidence for.
+
 MULTI-OUTCOME MARKETS:
 - A screenshot may show a market with MORE than two outcomes (e.g. "No
   Change" / "25 bps increase" / "25 bps decrease" / "50+ bps increase" /

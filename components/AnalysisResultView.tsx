@@ -33,6 +33,7 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               {result.platform === "screenshot" ? "From screenshot" : result.platform}
             </p>
+            <PlatformBadge platform={result.platform} />
             {result._mock && (
               <span className="rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
                 Demo data
@@ -178,6 +179,24 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
       {error && <p className="w-full text-xs text-no">{error}</p>}
     </div>
   );
+}
+
+function PlatformBadge({ platform }: { platform: string }) {
+  if (platform === "kalshi") {
+    return (
+      <span className="rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--on-brand)] shadow-[var(--glow-soft)]">
+        Kalshi
+      </span>
+    );
+  }
+  if (platform === "polymarket") {
+    return (
+      <span className="rounded-full bg-[#1652f0] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-[var(--glow-soft)]">
+        Polymarket
+      </span>
+    );
+  }
+  return null;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

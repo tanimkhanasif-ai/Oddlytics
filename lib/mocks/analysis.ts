@@ -49,14 +49,21 @@ const RISK_TEMPLATES = [
  * every outcome, recommend the single best one" feature even without a
  * live Anthropic key connected.
  */
-const MULTI_OUTCOME_DEMOS: { question: string; outcomes: string[] }[] = [
+const MULTI_OUTCOME_DEMOS: {
+  question: string;
+  outcomes: string[];
+  /** Demos the platform-badge feature too — detected from screenshot branding, when set. */
+  demoPlatform?: Platform;
+}[] = [
   {
     question: "Uploaded market screenshot — Fed Decision this month?",
     outcomes: ["No Change", "25 bps increase", "25 bps decrease", "50+ bps increase", "50+ bps decrease"],
+    demoPlatform: "polymarket",
   },
   {
     question: "Uploaded market screenshot — Election winner?",
     outcomes: ["Candidate A", "Candidate B", "Candidate C", "Candidate D"],
+    demoPlatform: "kalshi",
   },
   {
     question: "Uploaded market screenshot — Championship winner?",
@@ -102,7 +109,7 @@ export function generateMockAnalysis(input: MockAnalysisInput): MockAnalysisOutp
 
   const result: AnalysisResult = {
     market_question: question,
-    platform: input.platform,
+    platform: multiDemo?.demoPlatform ?? input.platform,
     recommendation,
     confidence_pct: confidencePct,
     recommended_outcome_label: recommendedOutcomeLabel,
