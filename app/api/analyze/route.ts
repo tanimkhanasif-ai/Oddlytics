@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       {
         type: "text",
         text: [
-          "This is a screenshot of a prediction-market question. Read the question and any visible prices/odds directly from the image.",
+          "This is a screenshot of a prediction market. Read the question and any visible prices/odds directly from the image. If it shows more than two possible outcomes, evaluate every outcome listed and follow the multi-outcome market instructions.",
           capital != null ? `Available trading capital: $${capital}` : "No capital figure was provided.",
         ].join("\n"),
       },

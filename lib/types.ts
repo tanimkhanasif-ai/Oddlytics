@@ -11,6 +11,14 @@ export interface AnalysisResult {
   platform: Platform;
   recommendation: "YES" | "NO";
   confidence_pct: number;
+  /**
+   * Set only when the screenshot showed a multi-outcome market (more than
+   * one option to bet on, e.g. "No Change" / "25 bps increase" / ...).
+   * Names the single outcome the model judged most worth betting on, out
+   * of every option visible in the image. Null/absent for plain binary
+   * YES/NO markets.
+   */
+  recommended_outcome_label?: string | null;
   reasons: string[];
   key_risks: string[];
   position_sizing: PositionSizing;

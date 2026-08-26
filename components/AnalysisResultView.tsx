@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
+import { GlowButton } from "@/components/landing/primitives";
 import type { AnalysisResult } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
 
@@ -12,21 +13,33 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
       ? typeof result._yesPrice === "number"
       : typeof result._noPrice === "number";
 
+  const betLabel = result.recommended_outcome_label
+    ? `Bet ${isYes ? "Yes" : "No"} on ${result.recommended_outcome_label}`
+    : `Bet ${isYes ? "Yes" : "No"}`;
+
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="glass-panel rounded-2xl p-6">
+      <div
+        className={`rounded-xl px-5 py-4 text-center text-lg font-bold shadow-[var(--glow-brand)] ${
+          isYes ? "bg-brand text-[color:var(--on-brand)]" : "bg-no text-white"
+        }`}
+      >
+        {betLabel}
+      </div>
+
+      <div className="mt-5 flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <p className="text-xs uppercase tracking-wide text-gray-500">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
               {result.platform === "screenshot" ? "From screenshot" : result.platform}
             </p>
             {result._mock && (
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+              <span className="rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
                 Demo data
               </span>
             )}
           </div>
-          <h2 className="mt-1 text-lg font-medium text-white">{result.market_question}</h2>
+          <h2 className="mt-1 text-lg font-medium text-foreground">{result.market_question}</h2>
         </div>
         <span
           className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold ${
@@ -40,15 +53,15 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
       <div className="mt-4 flex items-center gap-3">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
           <div
-            className={`h-full ${isYes ? "bg-yes" : "bg-no"}`}
+            className={`h-full ${isYes ? "bg-brand" : "bg-no"}`}
             style={{ width: `${result.confidence_pct}%` }}
           />
         </div>
-        <span className="text-sm text-gray-400">{result.confidence_pct}% confidence</span>
+        <span className="text-sm text-muted-foreground">{result.confidence_pct}% confidence</span>
       </div>
 
       <Section title="Why">
-        <ul className="list-disc space-y-1 pl-5 text-sm text-gray-300">
+        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/80">
           {result.reasons.map((r, i) => (
             <li key={i}>{r}</li>
           ))}
@@ -56,7 +69,7 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
       </Section>
 
       <Section title="Key risks">
-        <ul className="list-disc space-y-1 pl-5 text-sm text-gray-300">
+        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/80">
           {result.key_risks.map((r, i) => (
             <li key={i}>{r}</li>
           ))}
@@ -64,13 +77,13 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
       </Section>
 
       <Section title="Suggested position sizing">
-        <p className="text-sm text-gray-300">
+        <p className="text-sm text-foreground/80">
           {result.position_sizing.suggested_pct_of_capital}% of capital
           {result.position_sizing.suggested_amount != null
             ? ` (~${formatUsd(result.position_sizing.suggested_amount)})`
             : ""}
         </p>
-        <p className="mt-1 text-sm text-gray-500">{result.position_sizing.rationale}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{result.position_sizing.rationale}</p>
       </Section>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -79,7 +92,7 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
       </div>
 
       <Section title="Exit if">
-        <ul className="list-disc space-y-1 pl-5 text-sm text-gray-300">
+        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/80">
           {result.exit_if.map((r, i) => (
             <li key={i}>{r}</li>
           ))}
@@ -87,7 +100,7 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
       </Section>
 
       {canPaperTrade && (
-        <div className="mt-5 border-t border-white/10 pt-5">
+        <div className="mt-5 border-t border-border pt-5">
           <PaperTradeAction result={result} />
         </div>
       )}
@@ -133,40 +146,33 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
-      >
+      <GlowButton size="sm" onClick={() => setOpen(true)}>
         Paper trade this pick
-      </button>
+      </GlowButton>
     );
   }
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <label className="text-sm text-gray-400">
+      <label className="text-sm text-muted-foreground">
         Size (virtual USD)
         <input
           value={size}
           onChange={(e) => setSize(e.target.value)}
           inputMode="decimal"
-          className="ml-2 w-24 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-sm text-white"
+          className="ml-2 w-24 rounded-lg border border-brand/25 bg-brand/[0.05] px-2 py-1 text-sm text-foreground outline-none focus:border-brand/50"
         />
       </label>
-      <button
-        onClick={confirm}
-        disabled={!hydrated}
-        className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
-      >
+      <GlowButton size="sm" onClick={confirm} disabled={!hydrated}>
         Confirm {result.recommendation} @ {(entryPrice * 100).toFixed(0)}¢
-      </button>
+      </GlowButton>
       <button
         onClick={() => setOpen(false)}
-        className="text-sm text-gray-500 hover:text-white"
+        className="text-sm text-muted-foreground hover:text-foreground"
       >
         Cancel
       </button>
-      <span className="w-full text-xs text-gray-500">
+      <span className="w-full text-xs text-muted-foreground">
         Available virtual cash: {formatUsd(cashUsd)}
       </span>
       {error && <p className="w-full text-xs text-no">{error}</p>}
@@ -177,7 +183,7 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mt-5">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
       <div className="mt-2">{children}</div>
     </div>
   );
@@ -198,8 +204,8 @@ function InfoBox({
         tone === "yes" ? "border-yes/30 bg-yes/10" : "border-no/30 bg-no/10"
       }`}
     >
-      <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
-      <p className="mt-1 text-gray-200">{value}</p>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-foreground/90">{value}</p>
     </div>
   );
 }
