@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Check, Star } from "lucide-react";
 import { ProofBadge } from "@/components/app/ProofBadge";
-import { useAppConfig } from "@/lib/hooks/useAppConfig";
 
 function GoogleMark() {
   return (
@@ -41,9 +40,10 @@ function AppleMark() {
 const PERKS = ["Instant AI analysis", "No credit card required", "Cancel anytime"];
 
 /**
- * Shared sign-in / sign-up card. Google switches on automatically once
- * GOOGLE_CLIENT_ID/SECRET are set (see lib/auth.ts) — until then, clicking
- * it explains that rather than failing silently. Apple isn't built yet.
+ * Shared sign-in / sign-up card. Google is wired to real NextAuth sign-in
+ * (see lib/auth.ts) — if GOOGLE_CLIENT_ID/SECRET aren't set, NextAuth itself
+ * shows its own error page rather than this card guessing at the reason.
+ * Apple isn't built yet.
  */
 export default function AuthCard({
   heading,
@@ -56,9 +56,6 @@ export default function AuthCard({
   children: ReactNode;
   footer: ReactNode;
 }) {
-  const [socialNote, setSocialNote] = useState<string | null>(null);
-  const config = useAppConfig();
-
   return (
     <div className="w-full max-w-md">
       <div className="glass-panel rounded-3xl p-7 sm:p-8">
@@ -76,11 +73,7 @@ export default function AuthCard({
         <div className="mt-6 space-y-3">
           <button
             type="button"
-            onClick={() =>
-              config?.googleEnabled
-                ? signIn("google", { callbackUrl: "/dashboard" })
-                : setSocialNote("Google sign-in isn't connected yet — use your email below for now.")
-            }
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
             className="ghost-button w-full px-4 py-3 text-sm"
           >
             <GoogleMark /> Continue with Google
@@ -100,10 +93,6 @@ export default function AuthCard({
             </span>
           </div>
         </div>
-
-        {socialNote && (
-          <p className="mt-3 text-center text-xs text-muted-foreground">{socialNote}</p>
-        )}
 
         <div className="my-5 flex items-center gap-3">
           <span className="h-px flex-1 bg-border" />
