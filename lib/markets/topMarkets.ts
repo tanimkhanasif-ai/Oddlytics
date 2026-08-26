@@ -70,7 +70,10 @@ export async function fetchTrendingPolymarketMarkets(limit: number): Promise<Tre
       if (!outcomes.length) return null;
       const volumeUsd = Number(e.volume24hr ?? e.volume ?? 0);
       return {
-        id: e.id,
+        // The event slug, not Gamma's numeric event id — this is what
+        // fetchPolymarketQuote() can actually look a live price back up
+        // with later (see lib/markets/livePrice.ts).
+        id: e.slug,
         platform: "polymarket",
         question: e.title,
         outcomes: outcomes.slice(0, 2),

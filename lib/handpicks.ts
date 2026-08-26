@@ -8,7 +8,7 @@ const SCAN_SIZE = 40;
 /** Only markets the AI is at least this sure about are eligible. */
 export const MIN_CONFIDENCE = 70;
 /** How many picks survive into the published set. */
-const PICK_COUNT = 10;
+export const PICK_COUNT = 10;
 /** Analyze in small batches so one run doesn't hammer the API. */
 const BATCH_SIZE = 5;
 
@@ -112,6 +112,79 @@ export async function curateWeeklyPicks(): Promise<{ weekOf: Date; count: number
   ]);
 
   return { weekOf: week, count: winners.length, scanned: markets.length };
+}
+
+export interface ManualPickInput {
+  platform: "polymarket" | "kalshi";
+  /** Whatever real identifier the market has — a slug, ticker, or just a URL if that's all there is. */
+  marketId: string;
+  question: string;
+  url?: string | null;
+  volumeUsd?: number;
+  /** Market-implied probability (0-100) for the side the analysis recommends, so edge is comparable with the automated pipeline's picks. */
+  marketPct: number;
+  analysis: AnalysisResult;
+}
+
+function isValidManualPick(v: unknown): v is ManualPickInput {
+  if (!v || typeof v !== "object") return false;
+  const p = v as Record<string, unknown>;
+  return (
+    (p.platform === "polymarket" || p.platform === "kalshi") &&
+    typeof p.marketId === "string" &&
+    typeof p.question === "string" &&
+    typeof p.marketPct === "number" &&
+    !!p.analysis &&
+    typeof (p.analysis as AnalysisResult).confidence_pct === "number" &&
+    ((p.analysis as AnalysisResult).recommendation === "YES" ||
+      (p.analysis as AnalysisResult).recommendation === "NO")
+  );
+}
+
+/**
+ * Manual weekly-picks path: instead of (or alongside) the automated live-market
+ * scan, a batch of already-analyzed picks — e.g. from screenshots the user sent
+ * directly in chat — gets published the same way: filtered to MIN_CONFIDENCE,
+ * ranked by edge, capped at PICK_COUNT, replacing this week's set.
+ */
+export async function publishManualPicks(
+  items: unknown[]
+): Promise<{ weekOf: Date; count: number; received: number }> {
+  const week = weekStart();
+  const valid = items.filter(isValidManualPick);
+
+  const winners = valid
+    .map((it) => ({
+      ...it,
+      side: it.analysis.recommendation,
+      confidence: it.analysis.confidence_pct,
+      edge: it.analysis.confidence_pct - it.marketPct,
+    }))
+    .filter((s) => s.confidence >= MIN_CONFIDENCE)
+    .sort((a, b) => b.edge - a.edge || b.confidence - a.confidence)
+    .slice(0, PICK_COUNT);
+
+  await prisma.$transaction([
+    prisma.handpickedPick.deleteMany({ where: { weekOf: week } }),
+    prisma.handpickedPick.createMany({
+      data: winners.map((w, i) => ({
+        weekOf: week,
+        rank: i + 1,
+        platform: w.platform,
+        marketId: w.marketId,
+        question: w.question,
+        url: w.url ?? null,
+        side: w.side,
+        confidence: w.confidence,
+        marketPct: w.marketPct,
+        edge: w.edge,
+        volumeUsd: w.volumeUsd ?? 0,
+        analysis: w.analysis as unknown as object,
+      })),
+    }),
+  ]);
+
+  return { weekOf: week, count: winners.length, received: items.length };
 }
 
 /** This week's published picks, in rank order. */

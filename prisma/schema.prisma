@@ -27,6 +27,7 @@ model User {
   positions      PaperPosition[]
   trackedWallets TrackedWallet[]
   copyFollows    CopyFollow[]
+  marketFollows  MarketFollow[]
   mirroredTrades MirroredTrade[]
   analyses       AnalysisRecord[]
 }
@@ -37,6 +38,11 @@ model PaperPosition {
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   marketQuestion      String
   platform            String
+  /// Real market identifier for live re-pricing: a Polymarket Gamma event id,
+  /// or a Kalshi ticker. Null when the position wasn't opened against a real,
+  /// currently-resolvable market (e.g. a screenshot-only analyzer pick, or a
+  /// manually typed position) — those keep the simulated price walk.
+  marketId            String?
   side                String
   entryPrice          Float
   sizeUsd             Float
@@ -74,10 +80,29 @@ model CopyFollow {
   @@unique([userId, walletAddress])
 }
 
+/// "Copy a Kalshi market" instead of a trader — Kalshi has no public trader
+/// data (see lib/markets/polymarketTraders.ts), so this mirrors the AI's own
+/// read on a followed market instead of another person's trades.
+model MarketFollow {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform       String
+  marketId       String
+  question       String
+  url            String?
+  allocationUsd  Float
+  followedAt     DateTime  @default(now())
+  lastAnalyzedAt DateTime?
+
+  @@unique([userId, platform, marketId])
+}
+
 model MirroredTrade {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform    String   @default("polymarket")
   traderLabel String
   question    String
   outcome     String?

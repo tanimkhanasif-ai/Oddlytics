@@ -62,5 +62,6 @@ export async function fetchKalshiQuote(input: string): Promise<MarketQuote> {
     yesPrice,
     noPrice,
     url: input,
+    id: ticker,
   };
 }

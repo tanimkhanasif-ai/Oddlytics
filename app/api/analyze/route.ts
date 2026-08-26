@@ -4,6 +4,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { getAnthropicClient, ANALYSIS_MODEL } from "@/lib/anthropic";
 import { ANALYSIS_ENGINE_SYSTEM_PROMPT } from "@/lib/prompts";
 import { generateMockAnalysis } from "@/lib/mocks/analysis";
+import { checkAnalysisRateLimit, ANALYSIS_LIMIT } from "@/lib/rateLimit";
 import type { AnalysisResult, Platform } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -39,13 +40,34 @@ export async function POST(req: NextRequest) {
   const access = await requireSubscriber();
   if (!access.ok) return access.response;
 
+  const rateLimit = await checkAnalysisRateLimit(access.userId);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: `You've reached your limit of ${ANALYSIS_LIMIT} analyses for this 12-hour period.`,
+        limitExceeded: true,
+        resetAt: rateLimit.resetAt,
+      },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
   if (!body) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { mode, platform, question, yesPrice, noPrice, imageBase64, imageMediaType, capitalUsd } =
-    body as Record<string, unknown>;
+  const {
+    mode,
+    platform,
+    question,
+    yesPrice,
+    noPrice,
+    marketId,
+    imageBase64,
+    imageMediaType,
+    capitalUsd,
+  } = body as Record<string, unknown>;
 
   const isScreenshot = mode === "screenshot";
 
@@ -86,6 +108,7 @@ export async function POST(req: NextRequest) {
       ...mock.result,
       _yesPrice: mock.yesPrice,
       _noPrice: mock.noPrice,
+      _marketId: isScreenshot ? undefined : (marketId as string | undefined),
     });
   }
 
@@ -107,7 +130,7 @@ export async function POST(req: NextRequest) {
       {
         type: "text",
         text: [
-          "This is a screenshot of a prediction-market question. Read the question and any visible prices/odds directly from the image.",
+          "This is a screenshot of a prediction market. Read the question and any visible prices/odds directly from the image. If it shows more than two possible outcomes, evaluate every outcome listed and follow the multi-outcome market instructions.",
           capital != null ? `Available trading capital: $${capital}` : "No capital figure was provided.",
         ].join("\n"),
       },
@@ -161,6 +184,7 @@ export async function POST(req: NextRequest) {
       ...parsed,
       _yesPrice: isScreenshot ? undefined : (yesPrice as number),
       _noPrice: isScreenshot ? undefined : (noPrice as number),
+      _marketId: isScreenshot ? undefined : (marketId as string | undefined),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Analysis failed.";

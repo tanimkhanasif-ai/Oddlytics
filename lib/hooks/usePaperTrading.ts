@@ -8,6 +8,7 @@ interface ApiPosition {
   id: string;
   marketQuestion: string;
   platform: string;
+  marketId: string | null;
   side: "YES" | "NO";
   entryPrice: number;
   sizeUsd: number;
@@ -17,6 +18,7 @@ interface ApiPosition {
   exitPrice: number | null;
   source: string | null;
   sourceTraderAddress: string | null;
+  livePrice: number | null;
 }
 
 function mapPosition(r: ApiPosition): PaperPosition {
@@ -24,6 +26,7 @@ function mapPosition(r: ApiPosition): PaperPosition {
     id: r.id,
     marketQuestion: r.marketQuestion,
     platform: r.platform as PaperPosition["platform"],
+    marketId: r.marketId ?? undefined,
     side: r.side,
     entryPrice: r.entryPrice,
     sizeUsd: r.sizeUsd,
@@ -33,6 +36,7 @@ function mapPosition(r: ApiPosition): PaperPosition {
     exitPrice: r.exitPrice ?? undefined,
     source: (r.source as PaperPosition["source"]) ?? undefined,
     sourceTraderAddress: r.sourceTraderAddress ?? undefined,
+    livePrice: r.livePrice ?? undefined,
   };
 }
 
@@ -91,5 +95,5 @@ export function usePaperTrading() {
     await refresh();
   }, [refresh]);
 
-  return { cashUsd, positions, hydrated, openPosition, closePosition, reset };
+  return { cashUsd, positions, hydrated, openPosition, closePosition, reset, refresh };
 }

@@ -19,6 +19,7 @@ no prose before or after, no markdown code fences:
   "platform": "polymarket" | "kalshi" | "screenshot",
   "recommendation": "YES" | "NO",
   "confidence_pct": number (integer, 1-99),
+  "recommended_outcome_label": string | null,
   "reasons": string[] (2-4 items, each one clear sentence),
   "key_risks": string[] (2-3 items, each one clear sentence),
   "position_sizing": {
@@ -30,6 +31,34 @@ no prose before or after, no markdown code fences:
   "stop_loss": { "sell_if_price_falls_to": string },
   "exit_if": string[] (2-3 items, concrete triggers)
 }
+
+PLATFORM DETECTION FROM SCREENSHOTS:
+- When the input is a screenshot, look for visible branding, logos, or UI
+  chrome that identifies the source platform (e.g. Kalshi's or
+  Polymarket's name/logo, distinctive layout, or a visible URL).
+- If you can confidently identify it, set "platform" to "polymarket" or
+  "kalshi" instead of the generic "screenshot" value.
+- Only fall back to "screenshot" when the source truly cannot be
+  determined from the image. Never guess a platform you can't see
+  evidence for.
+
+MULTI-OUTCOME MARKETS:
+- A screenshot may show a market with MORE than two outcomes (e.g. "No
+  Change" / "25 bps increase" / "25 bps decrease" / "50+ bps increase" /
+  "50+ bps decrease", each with its own price) rather than a plain
+  binary YES/NO question.
+- If so, read and weigh EVERY outcome shown, not just whichever one
+  happened to be selected/highlighted in the screenshot. Compare each
+  outcome's price against your own estimate of its true probability and
+  pick the single outcome with the best edge (the largest gap between
+  price and your fair-value estimate, in your favor).
+- Set "recommended_outcome_label" to that outcome's name, copied exactly
+  as it's labeled in the image (e.g. "No Change"). Set "recommendation"
+  to YES if you'd buy that outcome's Yes side, or NO if the better trade
+  is betting against it. Base every other field (reasons, risks, take
+  profit, stop loss, exit_if) on that specific chosen outcome.
+- For a plain binary YES/NO market with only one real outcome to weigh,
+  set "recommended_outcome_label" to null and reason as usual.
 
 HOW TO REASON:
 - Base your recommendation on the actual mechanics of the situation: base

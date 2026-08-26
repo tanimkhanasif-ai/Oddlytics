@@ -44,6 +44,33 @@ const RISK_TEMPLATES = [
   "Thin liquidity on some prediction markets can make prices swing sharply on small trades, independent of new information.",
 ];
 
+/**
+ * Demo multi-outcome markets, so a screenshot upload previews the "compare
+ * every outcome, recommend the single best one" feature even without a
+ * live Anthropic key connected.
+ */
+const MULTI_OUTCOME_DEMOS: {
+  question: string;
+  outcomes: string[];
+  /** Demos the platform-badge feature too — detected from screenshot branding, when set. */
+  demoPlatform?: Platform;
+}[] = [
+  {
+    question: "Uploaded market screenshot — Fed Decision this month?",
+    outcomes: ["No Change", "25 bps increase", "25 bps decrease", "50+ bps increase", "50+ bps decrease"],
+    demoPlatform: "polymarket",
+  },
+  {
+    question: "Uploaded market screenshot — Election winner?",
+    outcomes: ["Candidate A", "Candidate B", "Candidate C", "Candidate D"],
+    demoPlatform: "kalshi",
+  },
+  {
+    question: "Uploaded market screenshot — Championship winner?",
+    outcomes: ["Team A", "Team B", "Team C", "Team D", "Team E"],
+  },
+];
+
 export function generateMockAnalysis(input: MockAnalysisInput): MockAnalysisOutput {
   const rand = seededRandom(`${input.question}|${input.platform}|${input.yesPrice ?? "na"}`);
 
@@ -67,15 +94,32 @@ export function generateMockAnalysis(input: MockAnalysisInput): MockAnalysisOutp
   const takeProfitPct = Math.min(97, entryPct + 15 + Math.round(rand() * 10));
   const stopLossPct = Math.max(3, entryPct - 12 - Math.round(rand() * 8));
 
-  const question = input.question || "Uploaded market screenshot";
+  // Screenshot uploads demo the multi-outcome "compare every option, pick the
+  // best one" feature, since a real screenshot could show more than a plain
+  // YES/NO question and we can't actually read the image in mock mode.
+  const multiDemo =
+    input.platform === "screenshot"
+      ? MULTI_OUTCOME_DEMOS[Math.floor(rand() * MULTI_OUTCOME_DEMOS.length)]
+      : null;
+  const recommendedOutcomeLabel = multiDemo
+    ? multiDemo.outcomes[Math.floor(rand() * multiDemo.outcomes.length)]
+    : null;
+
+  const question = multiDemo ? multiDemo.question : input.question || "Uploaded market screenshot";
 
   const result: AnalysisResult = {
     market_question: question,
-    platform: input.platform,
+    platform: multiDemo?.demoPlatform ?? input.platform,
     recommendation,
     confidence_pct: confidencePct,
+    recommended_outcome_label: recommendedOutcomeLabel,
     reasons: [
       "This is a mocked analysis — the real Anthropic API isn't connected yet, so nothing below reflects actual research.",
+      ...(multiDemo
+        ? [
+            `Every outcome in this market was compared (${multiDemo.outcomes.join(", ")}); "${recommendedOutcomeLabel}" showed the widest gap between its price and a reasonable fair-value estimate.`,
+          ]
+        : []),
       REASON_TEMPLATES[1](question),
       REASON_TEMPLATES[Math.floor(rand() * REASON_TEMPLATES.length)](question),
     ],

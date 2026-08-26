@@ -76,7 +76,10 @@ export async function fetchPolymarketQuote(input: string): Promise<MarketQuote> 
       const market: GammaMarket | undefined = Array.isArray(data) ? data[0] : data;
       if (market) {
         const quote = parseGammaMarket(market, input);
-        if (quote) return quote;
+        // Store the slug that reached this result, not the raw input — a
+        // bare slug round-trips through this same function later, which is
+        // what real-time re-pricing (lib/markets/livePrice.ts) relies on.
+        if (quote) return { ...quote, id: parsed.slug };
       }
     }
   }
@@ -100,5 +103,5 @@ export async function fetchPolymarketQuote(input: string): Promise<MarketQuote> 
   if (!quote) {
     throw new Error("Couldn't parse prices from the Polymarket market data.");
   }
-  return quote;
+  return { ...quote, id: parsed.slug };
 }

@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Wallet, Plus, ChevronDown, Star } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Wallet, Plus, ChevronDown, Star, Link2, ImagePlus } from "lucide-react";
 import FeatureGate from "@/components/FeatureGate";
 import PlatformBadge from "@/components/PlatformBadge";
+import AnalysisResultView from "@/components/AnalysisResultView";
 import { Sparkline } from "@/components/app/Sparkline";
 import { GlowButton } from "@/components/landing/primitives";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
 import type { TrendingMarket } from "@/lib/markets/topMarkets";
-import type { PaperPosition, Platform } from "@/lib/types";
+import type { AnalysisResult, PaperPosition, Platform } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
 
 /** Deterministic wiggle so each row's sparkline differs without inventing price history. */
@@ -18,6 +19,11 @@ const series = (up: boolean, seed: number) =>
     const wave = Math.sin((i + seed) * 1.1) * 12;
     return (up ? i * 6 : -i * 6) + wave + 50;
   });
+
+function closedPnl(p: PaperPosition): number {
+  const exit = p.exitPrice ?? p.entryPrice;
+  return (p.sizeUsd / p.entryPrice) * exit - p.sizeUsd;
+}
 
 function compactUsd(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1).replace(/\.0$/, "")}B`;
@@ -34,11 +40,14 @@ export default function PaperTradingPage() {
   );
 }
 
+type TradeMode = "manual" | "link" | "screenshot";
+
 function PaperTrading() {
-  const { cashUsd, positions, hydrated, openPosition, closePosition } = usePaperTrading();
+  const { cashUsd, positions, hydrated, openPosition, closePosition, refresh } = usePaperTrading();
 
   const [markets, setMarkets] = useState<TrendingMarket[]>([]);
   const [tradeOpen, setTradeOpen] = useState(false);
+  const [tradeMode, setTradeMode] = useState<TradeMode>("manual");
   const [prefill, setPrefill] = useState<TrendingMarket | null>(null);
 
   useEffect(() => {
@@ -49,15 +58,22 @@ function PaperTrading() {
   }, []);
 
   const openPositions = positions.filter((p) => p.status === "open");
+  const closedPositions = positions.filter((p) => p.status === "closed");
 
   const unrealizedPnl = useMemo(
     () =>
       openPositions.reduce((sum, p) => {
-        const current = simulateCurrentPrice(p.id, p.entryPrice, p.openedAt);
+        const current = p.livePrice ?? simulateCurrentPrice(p.id, p.entryPrice, p.openedAt);
         return sum + ((p.sizeUsd / p.entryPrice) * current - p.sizeUsd);
       }, 0),
     [openPositions],
   );
+
+  const { winRate, wins } = useMemo(() => {
+    if (closedPositions.length === 0) return { winRate: null as number | null, wins: 0 };
+    const winCount = closedPositions.filter((p) => closedPnl(p) > 0).length;
+    return { winRate: Math.round((winCount / closedPositions.length) * 100), wins: winCount };
+  }, [closedPositions]);
 
   if (!hydrated) return null;
 
@@ -76,6 +92,17 @@ function PaperTrading() {
           </div>
         </div>
         <div className="flex items-center gap-6">
+          {winRate != null && (
+            <div className="text-right">
+              <p className="text-xs tracking-widest text-muted-foreground">WIN RATE</p>
+              <p className={`text-xl font-bold ${winRate >= 50 ? "text-up" : "text-down"}`}>
+                {winRate}%
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {wins}/{closedPositions.length} trades
+              </p>
+            </div>
+          )}
           <div className="text-right">
             <p className="text-xs tracking-widest text-muted-foreground">P&amp;L</p>
             <p className={`text-xl font-bold ${pnlUp ? "text-up" : "text-down"}`}>
@@ -100,15 +127,37 @@ function PaperTrading() {
       </button>
 
       {tradeOpen && (
-        <TradeForm
-          cashUsd={cashUsd}
-          prefill={prefill}
-          onConsumePrefill={() => setPrefill(null)}
-          onOpen={async (p) => {
-            const ok = await openPosition(p);
-            if (ok) setTradeOpen(false);
-          }}
-        />
+        <div className="glass-panel animate-fade-in space-y-4 rounded-3xl p-5">
+          <div className="flex gap-2">
+            <ModeTab active={tradeMode === "manual"} onClick={() => setTradeMode("manual")}>
+              Manual
+            </ModeTab>
+            <ModeTab active={tradeMode === "link"} onClick={() => setTradeMode("link")}>
+              <Link2 className="h-3.5 w-3.5" /> Paste link
+            </ModeTab>
+            <ModeTab active={tradeMode === "screenshot"} onClick={() => setTradeMode("screenshot")}>
+              <ImagePlus className="h-3.5 w-3.5" /> Screenshot
+            </ModeTab>
+          </div>
+
+          {tradeMode === "manual" && (
+            <ManualTradeForm
+              cashUsd={cashUsd}
+              prefill={prefill}
+              onConsumePrefill={() => setPrefill(null)}
+              onOpen={async (p) => {
+                const ok = await openPosition(p);
+                if (ok) setTradeOpen(false);
+              }}
+            />
+          )}
+          {tradeMode === "link" && (
+            <LinkAnalyzeForm onOpened={() => { refresh(); setTradeOpen(false); }} />
+          )}
+          {tradeMode === "screenshot" && (
+            <ScreenshotAnalyzeForm onOpened={() => { refresh(); setTradeOpen(false); }} />
+          )}
+        </div>
       )}
 
       <div className="glass-panel overflow-hidden rounded-3xl p-5">
@@ -162,6 +211,17 @@ function PaperTrading() {
           </GlowButton>
         </div>
       )}
+
+      {closedPositions.length > 0 && (
+        <div className="glass-panel rounded-3xl p-5">
+          <h2 className="font-semibold text-foreground">Trade history</h2>
+          <div className="mt-3 divide-y divide-border">
+            {closedPositions.map((p) => (
+              <ClosedTradeRow key={p.id} position={p} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -207,7 +267,8 @@ function PositionRow({
   position: PaperPosition;
   onClose: (id: string, exitPrice: number) => void;
 }) {
-  const current = simulateCurrentPrice(position.id, position.entryPrice, position.openedAt);
+  const isLive = position.livePrice != null;
+  const current = position.livePrice ?? simulateCurrentPrice(position.id, position.entryPrice, position.openedAt);
   const pnl = (position.sizeUsd / position.entryPrice) * current - position.sizeUsd;
   const up = pnl >= 0;
 
@@ -215,7 +276,7 @@ function PositionRow({
     <div className="flex flex-wrap items-center justify-between gap-3 py-3.5">
       <div className="min-w-0">
         <div className="mb-1">
-          <PlatformBadge platform={position.platform} size="xs" />
+          <PlatformBadge platform={position.platform} size="xs" variant="solid" />
         </div>
         <p className="truncate text-sm font-medium text-foreground">{position.marketQuestion}</p>
         <p className="text-xs text-muted-foreground">
@@ -226,7 +287,9 @@ function PositionRow({
       </div>
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <p className="text-xs text-muted-foreground">Current</p>
+          <p className="text-xs text-muted-foreground">
+            Current {isLive && <span className="text-up">· live</span>}
+          </p>
           <p className="text-sm text-foreground">{(current * 100).toFixed(0)}¢</p>
         </div>
         <div className="text-right">
@@ -246,7 +309,269 @@ function PositionRow({
   );
 }
 
-function TradeForm({
+function ClosedTradeRow({ position }: { position: PaperPosition }) {
+  const pnl = closedPnl(position);
+  const won = pnl > 0;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 py-3.5">
+      <div className="min-w-0">
+        <div className="mb-1 flex items-center gap-2">
+          <PlatformBadge platform={position.platform} size="xs" variant="solid" />
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+              won ? "bg-up/20 text-up" : "bg-down/20 text-down"
+            }`}
+          >
+            {won ? "Win" : "Loss"}
+          </span>
+        </div>
+        <p className="truncate text-sm font-medium text-foreground">{position.marketQuestion}</p>
+        <p className="text-xs text-muted-foreground">
+          {position.side} @ {(position.entryPrice * 100).toFixed(0)}¢ → exit{" "}
+          {((position.exitPrice ?? position.entryPrice) * 100).toFixed(0)}¢ ·{" "}
+          {formatUsd(position.sizeUsd)}
+        </p>
+      </div>
+      <div className="text-right">
+        <p className="text-xs text-muted-foreground">P&amp;L</p>
+        <p className={`text-sm font-semibold ${won ? "text-up" : "text-down"}`}>
+          {won ? "+" : ""}
+          {formatUsd(pnl)}
+        </p>
+        <p className={`text-[10px] ${won ? "text-up" : "text-down"}`}>
+          {won ? "+" : ""}
+          {((pnl / position.sizeUsd) * 100).toFixed(1)}%
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ModeTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+        active
+          ? "bg-brand text-[color:var(--on-brand)]"
+          : "border border-brand/30 text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function LinkAnalyzeForm({ onOpened }: { onOpened: () => void }) {
+  const [platform, setPlatform] = useState<"polymarket" | "kalshi">("polymarket");
+  const [input, setInput] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+
+  async function analyze() {
+    if (!input.trim()) return;
+    setError(null);
+    setAnalyzing(true);
+    try {
+      const resolveRes = await fetch("/api/markets/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform, input: input.trim() }),
+      });
+      const quote = await resolveRes.json();
+      if (!resolveRes.ok) throw new Error(quote.error || "Failed to fetch market data.");
+
+      const analyzeRes = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "live",
+          platform: quote.platform,
+          question: quote.question,
+          yesPrice: quote.yesPrice,
+          noPrice: quote.noPrice,
+          marketId: quote.id,
+        }),
+      });
+      const data = await analyzeRes.json();
+      if (!analyzeRes.ok) throw new Error(data.error || "Analysis failed.");
+      setResult(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  if (result) {
+    return (
+      <div className="space-y-3">
+        <AnalysisResultView result={result} onOpened={onOpened} />
+        <button
+          onClick={() => setResult(null)}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Analyze another market
+        </button>
+      </div>
+    );
+  }
+
+  const field =
+    "w-full rounded-xl border border-brand/25 bg-brand/[0.05] px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-brand/50";
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Paste a market link and the AI will analyze it, then you can paper trade the pick.
+      </p>
+      <div className="flex gap-2">
+        <PlatformButton active={platform === "polymarket"} onClick={() => setPlatform("polymarket")}>
+          Polymarket
+        </PlatformButton>
+        <PlatformButton active={platform === "kalshi"} onClick={() => setPlatform("kalshi")}>
+          Kalshi
+        </PlatformButton>
+      </div>
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder={
+          platform === "polymarket"
+            ? "https://polymarket.com/event/..."
+            : "https://kalshi.com/markets/... or TICKER"
+        }
+        className={field}
+      />
+      <GlowButton size="sm" onClick={analyze} disabled={analyzing}>
+        {analyzing ? "Analyzing…" : "Analyze"}
+      </GlowButton>
+      {error && <p className="text-sm text-down">{error}</p>}
+    </div>
+  );
+}
+
+function ScreenshotAnalyzeForm({ onOpened }: { onOpened: () => void }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+
+  function handleFile(file: File | null) {
+    if (!file) return;
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setImagePreview(dataUrl);
+      const [header, base64] = dataUrl.split(",");
+      const mediaType = header.match(/data:(.*);base64/)?.[1] || "image/png";
+      setAnalyzing(true);
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "screenshot", imageBase64: base64, imageMediaType: mediaType }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Analysis failed.");
+        setResult(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Analysis failed.");
+      } finally {
+        setAnalyzing(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  if (result) {
+    return (
+      <div className="space-y-3">
+        <AnalysisResultView result={result} onOpened={onOpened} />
+        <button
+          onClick={() => {
+            setResult(null);
+            setImagePreview(null);
+          }}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Analyze another screenshot
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Upload a market screenshot and the AI will analyze it, then you can paper trade the pick.
+      </p>
+      <div
+        className="cursor-pointer rounded-xl border border-dashed border-brand/35 bg-brand/[0.03] px-6 py-10 text-center transition-colors duration-200 hover:border-brand/60"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        {imagePreview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imagePreview}
+            alt="Screenshot preview"
+            className="mx-auto max-h-40 rounded-lg object-contain"
+          />
+        ) : (
+          <ImagePlus className="mx-auto h-8 w-8 text-brand" strokeWidth={1.4} />
+        )}
+        <GlowButton size="sm" className="mx-auto mt-4" onClick={() => fileInputRef.current?.click()}>
+          {analyzing ? "Analyzing…" : "Click to add a screenshot"}
+        </GlowButton>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          className="hidden"
+          onChange={(e) => handleFile(e.target.files?.[0] || null)}
+        />
+      </div>
+      {error && <p className="text-sm text-down">{error}</p>}
+    </div>
+  );
+}
+
+function PlatformButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+        active
+          ? "bg-brand text-[color:var(--on-brand)]"
+          : "border border-brand/30 text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ManualTradeForm({
   cashUsd,
   prefill,
   onConsumePrefill,
@@ -262,12 +587,14 @@ function TradeForm({
   const [side, setSide] = useState<"YES" | "NO">("YES");
   const [entryCents, setEntryCents] = useState("50");
   const [size, setSize] = useState("100");
+  const [marketId, setMarketId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!prefill) return;
     setQuestion(prefill.question);
     setPlatform(prefill.platform);
     setEntryCents(String(prefill.outcomes[0]?.pricePct ?? 50));
+    setMarketId(prefill.id);
     onConsumePrefill();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill]);
@@ -276,21 +603,25 @@ function TradeForm({
     const entryPrice = Number(entryCents) / 100;
     const sizeUsd = Number(size);
     if (!question.trim() || !entryPrice || entryPrice <= 0 || entryPrice >= 1 || !sizeUsd) return;
-    onOpen({ marketQuestion: question.trim(), platform, side, entryPrice, sizeUsd });
+    onOpen({ marketQuestion: question.trim(), platform, marketId, side, entryPrice, sizeUsd });
     setQuestion("");
+    setMarketId(undefined);
   }
 
   const field =
     "w-full rounded-xl border border-brand/25 bg-brand/[0.05] px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-brand/50";
 
   return (
-    <div className="glass-panel animate-fade-in space-y-3 rounded-3xl p-5">
+    <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
         Pick a market below to stage a virtual position. Nothing here uses real money.
       </p>
       <input
         value={question}
-        onChange={(e) => setQuestion(e.target.value)}
+        onChange={(e) => {
+          setQuestion(e.target.value);
+          setMarketId(undefined);
+        }}
         placeholder="Market question"
         className={field}
       />
