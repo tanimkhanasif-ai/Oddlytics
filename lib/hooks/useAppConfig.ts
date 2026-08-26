@@ -14,7 +14,7 @@ export function useAppConfig() {
         if (!cancelled) setConfig(data);
       })
       .catch(() => {
-        if (!cancelled) setConfig({ aiEnabled: false, paddleEnabled: false });
+        if (!cancelled) setConfig({ aiEnabled: false, paddleEnabled: false, googleEnabled: false });
       });
     return () => {
       cancelled = true;

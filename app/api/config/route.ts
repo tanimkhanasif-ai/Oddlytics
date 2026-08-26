@@ -7,5 +7,6 @@ export async function GET() {
   return NextResponse.json({
     aiEnabled: !!process.env.ANTHROPIC_API_KEY,
     paddleEnabled: !!(process.env.PADDLE_API_KEY && process.env.PADDLE_WEBHOOK_SECRET),
+    googleEnabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
   });
 }

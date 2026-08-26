@@ -2,8 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { Check, Star } from "lucide-react";
 import { ProofBadge } from "@/components/app/ProofBadge";
+import { useAppConfig } from "@/lib/hooks/useAppConfig";
 
 function GoogleMark() {
   return (
@@ -39,8 +41,9 @@ function AppleMark() {
 const PERKS = ["Instant AI analysis", "No credit card required", "Cancel anytime"];
 
 /**
- * Shared sign-in / sign-up card. Google and Apple are shown but not yet
- * connected — clicking Google explains that rather than failing silently.
+ * Shared sign-in / sign-up card. Google switches on automatically once
+ * GOOGLE_CLIENT_ID/SECRET are set (see lib/auth.ts) — until then, clicking
+ * it explains that rather than failing silently. Apple isn't built yet.
  */
 export default function AuthCard({
   heading,
@@ -54,6 +57,7 @@ export default function AuthCard({
   footer: ReactNode;
 }) {
   const [socialNote, setSocialNote] = useState<string | null>(null);
+  const config = useAppConfig();
 
   return (
     <div className="w-full max-w-md">
@@ -73,7 +77,9 @@ export default function AuthCard({
           <button
             type="button"
             onClick={() =>
-              setSocialNote("Google sign-in isn't connected yet — use your email below for now.")
+              config?.googleEnabled
+                ? signIn("google", { callbackUrl: "/dashboard" })
+                : setSocialNote("Google sign-in isn't connected yet — use your email below for now.")
             }
             className="ghost-button w-full px-4 py-3 text-sm"
           >

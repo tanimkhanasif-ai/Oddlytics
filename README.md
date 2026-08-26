@@ -132,7 +132,30 @@ real path.
 5. Only switch `NEXT_PUBLIC_PADDLE_ENV` to `production` (with production keys/price) after a
    sandbox checkout has been verified working end-to-end.
 
-### 3. Market data (already live, no keys needed)
+### 3. Google sign-in (optional)
+
+Leave `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` unset and "Continue with Google" just explains
+it's not connected yet — email/password sign-up and login already work fully without it. To turn
+it on:
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com), create a project (or pick
+   an existing one).
+2. **APIs & Services → OAuth consent screen** — configure it (External, app name, your email).
+   This is a one-time setup per Google Cloud project.
+3. **APIs & Services → Credentials → Create Credentials → OAuth client ID → Web application.**
+4. Under **Authorized redirect URIs**, add exactly:
+   - `http://localhost:3000/api/auth/callback/google` (local dev)
+   - `https://<your-production-domain>/api/auth/callback/google` (prod — add this once you have
+     a real domain; you can come back and add it later)
+5. Copy the generated **Client ID** and **Client secret** into `GOOGLE_CLIENT_ID` /
+   `GOOGLE_CLIENT_SECRET` — in `.env.local` for local dev, and in Vercel's project env vars for
+   production. Restart the dev server (or redeploy) after setting them.
+
+The first time someone signs in with Google, a `User` row is created for them automatically
+(`lib/auth.ts`'s `signIn` callback) with no password — they can only sign in with Google after
+that, since there's nothing to check a typed password against.
+
+### 4. Market data (already live, no keys needed)
 
 Polymarket and Kalshi market-data fetching is already real and unauthenticated:
 
@@ -141,7 +164,7 @@ Polymarket and Kalshi market-data fetching is already real and unauthenticated:
 
 Nothing to configure here.
 
-### 4. Wallet Tracker / Copy Trading (already live, no keys needed)
+### 5. Wallet Tracker / Copy Trading (already live, no keys needed)
 
 `lib/markets/polymarketTraders.ts` calls Polymarket's public Data API
 (`https://data-api.polymarket.com`) for the trader leaderboard and per-wallet trade history — real
@@ -156,7 +179,7 @@ data, no auth, nothing to configure. Two things worth knowing:
   blockchain like Polymarket), so there was nothing honest to build there — these two features
   cover Polymarket only rather than filling the gap with scraped or fabricated Kalshi data.
 
-### 5. Weekly Handpicked Bets (needs `CRON_SECRET`)
+### 6. Weekly Handpicked Bets (needs `CRON_SECRET`)
 
 Handpicked Bets is a *cached weekly set*, not a live scan on every page load. Once a week a cron
 job scans live markets, runs each one through the same analyzer the AI Predictor uses, and stores
@@ -273,6 +296,8 @@ middleware.ts                       redirects unauthenticated visitors to /login
 | `PADDLE_API_KEY`         | no       | unset (webhook disabled) | Webhook signature verification |
 | `PADDLE_WEBHOOK_SECRET`  | no       | unset (webhook disabled) | Webhook signature verification |
 | `CRON_SECRET`            | no       | unset (cron disabled)    | Weekly Handpicked Bets curation run |
+| `GOOGLE_CLIENT_ID`       | no       | unset (Google sign-in disabled) | From Google Cloud Console — see section 3 above |
+| `GOOGLE_CLIENT_SECRET`   | no       | unset (Google sign-in disabled) | From Google Cloud Console — see section 3 above |
 
 ## Deploying to Vercel
 
