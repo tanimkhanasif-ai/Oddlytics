@@ -10,7 +10,7 @@ import { GlowButton } from "@/components/landing/primitives";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
 import type { TrendingMarket } from "@/lib/markets/topMarkets";
-import type { AnalysisResult, PaperPosition, Platform } from "@/lib/types";
+import type { AnalysisResult, PaperPosition } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
 
 /** Deterministic wiggle so each row's sparkline differs without inventing price history. */
@@ -40,14 +40,15 @@ export default function PaperTradingPage() {
   );
 }
 
-type TradeMode = "manual" | "link" | "screenshot";
+type TradeMode = "link" | "screenshot";
 
 function PaperTrading() {
-  const { cashUsd, positions, hydrated, openPosition, closePosition, refresh } = usePaperTrading();
+  const { cashUsd, positions, hydrated, closePosition, refresh } = usePaperTrading();
 
   const [markets, setMarkets] = useState<TrendingMarket[]>([]);
+  const [marketsCollapsed, setMarketsCollapsed] = useState(false);
   const [tradeOpen, setTradeOpen] = useState(false);
-  const [tradeMode, setTradeMode] = useState<TradeMode>("manual");
+  const [tradeMode, setTradeMode] = useState<TradeMode>("link");
   const [prefill, setPrefill] = useState<TrendingMarket | null>(null);
 
   useEffect(() => {
@@ -129,9 +130,6 @@ function PaperTrading() {
       {tradeOpen && (
         <div className="glass-panel animate-fade-in space-y-4 rounded-3xl p-5">
           <div className="flex gap-2">
-            <ModeTab active={tradeMode === "manual"} onClick={() => setTradeMode("manual")}>
-              Manual
-            </ModeTab>
             <ModeTab active={tradeMode === "link"} onClick={() => setTradeMode("link")}>
               <Link2 className="h-3.5 w-3.5" /> Paste link
             </ModeTab>
@@ -140,19 +138,12 @@ function PaperTrading() {
             </ModeTab>
           </div>
 
-          {tradeMode === "manual" && (
-            <ManualTradeForm
-              cashUsd={cashUsd}
+          {tradeMode === "link" && (
+            <LinkAnalyzeForm
               prefill={prefill}
               onConsumePrefill={() => setPrefill(null)}
-              onOpen={async (p) => {
-                const ok = await openPosition(p);
-                if (ok) setTradeOpen(false);
-              }}
+              onOpened={() => { refresh(); setTradeOpen(false); }}
             />
-          )}
-          {tradeMode === "link" && (
-            <LinkAnalyzeForm onOpened={() => { refresh(); setTradeOpen(false); }} />
           )}
           {tradeMode === "screenshot" && (
             <ScreenshotAnalyzeForm onOpened={() => { refresh(); setTradeOpen(false); }} />
@@ -161,21 +152,31 @@ function PaperTrading() {
       )}
 
       <div className="glass-panel overflow-hidden rounded-3xl p-5">
-        <div className="flex items-center gap-3">
-          <Star className="h-6 w-6 text-brand" />
-          <div>
-            <h2 className="font-semibold text-foreground">Practice popular markets</h2>
-            <p className="text-xs text-muted-foreground">Test your strategies with virtual money</p>
-          </div>
-        </div>
+        <button
+          onClick={() => setMarketsCollapsed((c) => !c)}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="flex items-center gap-3">
+            <Star className="h-6 w-6 text-brand" />
+            <span>
+              <h2 className="font-semibold text-foreground">Practice popular markets</h2>
+              <p className="text-xs text-muted-foreground">Test your strategies with virtual money</p>
+            </span>
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+              marketsCollapsed ? "" : "rotate-180"
+            }`}
+          />
+        </button>
 
-        {markets.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Live markets are loading — if this stays empty, the market APIs aren&apos;t reachable
-            from this environment yet.
-          </p>
-        ) : (
-          <>
+        {!marketsCollapsed &&
+          (markets.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Live markets are loading — if this stays empty, the market APIs aren&apos;t reachable
+              from this environment yet.
+            </p>
+          ) : (
             <div className="mt-4 divide-y divide-border">
               {markets.map((m, i) => (
                 <MarketRow
@@ -189,9 +190,7 @@ function PaperTrading() {
                 />
               ))}
             </div>
-
-          </>
-        )}
+          ))}
       </div>
 
       {openPositions.length > 0 ? (
@@ -371,22 +370,41 @@ function ModeTab({
   );
 }
 
-function LinkAnalyzeForm({ onOpened }: { onOpened: () => void }) {
+function LinkAnalyzeForm({
+  prefill,
+  onConsumePrefill,
+  onOpened,
+}: {
+  prefill: TrendingMarket | null;
+  onConsumePrefill: () => void;
+  onOpened: () => void;
+}) {
   const [platform, setPlatform] = useState<"polymarket" | "kalshi">("polymarket");
   const [input, setInput] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
-  async function analyze() {
-    if (!input.trim()) return;
+  useEffect(() => {
+    if (!prefill) return;
+    setPlatform(prefill.platform);
+    setInput(prefill.id);
+    onConsumePrefill();
+    analyze(prefill.platform, prefill.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
+
+  async function analyze(overridePlatform?: "polymarket" | "kalshi", overrideInput?: string) {
+    const usePlatform = overridePlatform ?? platform;
+    const useInput = (overrideInput ?? input).trim();
+    if (!useInput) return;
     setError(null);
     setAnalyzing(true);
     try {
       const resolveRes = await fetch("/api/markets/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ platform, input: input.trim() }),
+        body: JSON.stringify({ platform: usePlatform, input: useInput }),
       });
       const quote = await resolveRes.json();
       if (!resolveRes.ok) throw new Error(quote.error || "Failed to fetch market data.");
@@ -568,102 +586,5 @@ function PlatformButton({
     >
       {children}
     </button>
-  );
-}
-
-function ManualTradeForm({
-  cashUsd,
-  prefill,
-  onConsumePrefill,
-  onOpen,
-}: {
-  cashUsd: number;
-  prefill: TrendingMarket | null;
-  onConsumePrefill: () => void;
-  onOpen: (p: Omit<PaperPosition, "id" | "openedAt" | "status">) => void;
-}) {
-  const [question, setQuestion] = useState("");
-  const [platform, setPlatform] = useState<Platform>("polymarket");
-  const [side, setSide] = useState<"YES" | "NO">("YES");
-  const [entryCents, setEntryCents] = useState("50");
-  const [size, setSize] = useState("100");
-  const [marketId, setMarketId] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (!prefill) return;
-    setQuestion(prefill.question);
-    setPlatform(prefill.platform);
-    setEntryCents(String(prefill.outcomes[0]?.pricePct ?? 50));
-    setMarketId(prefill.id);
-    onConsumePrefill();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefill]);
-
-  function submit() {
-    const entryPrice = Number(entryCents) / 100;
-    const sizeUsd = Number(size);
-    if (!question.trim() || !entryPrice || entryPrice <= 0 || entryPrice >= 1 || !sizeUsd) return;
-    onOpen({ marketQuestion: question.trim(), platform, marketId, side, entryPrice, sizeUsd });
-    setQuestion("");
-    setMarketId(undefined);
-  }
-
-  const field =
-    "w-full rounded-xl border border-brand/25 bg-brand/[0.05] px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-brand/50";
-
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Pick a market below to stage a virtual position. Nothing here uses real money.
-      </p>
-      <input
-        value={question}
-        onChange={(e) => {
-          setQuestion(e.target.value);
-          setMarketId(undefined);
-        }}
-        placeholder="Market question"
-        className={field}
-      />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <select
-          value={platform}
-          onChange={(e) => setPlatform(e.target.value as Platform)}
-          className={field}
-        >
-          <option value="polymarket">Polymarket</option>
-          <option value="kalshi">Kalshi</option>
-          <option value="screenshot">Screenshot</option>
-        </select>
-        <select
-          value={side}
-          onChange={(e) => setSide(e.target.value as "YES" | "NO")}
-          className={field}
-        >
-          <option value="YES">YES</option>
-          <option value="NO">NO</option>
-        </select>
-        <input
-          value={entryCents}
-          onChange={(e) => setEntryCents(e.target.value)}
-          inputMode="numeric"
-          placeholder="Entry price (¢)"
-          className={field}
-        />
-        <input
-          value={size}
-          onChange={(e) => setSize(e.target.value)}
-          inputMode="decimal"
-          placeholder="Size (virtual USD)"
-          className={field}
-        />
-      </div>
-      <div className="flex items-center gap-3">
-        <GlowButton size="sm" onClick={submit}>
-          Open position
-        </GlowButton>
-        <span className="text-xs text-muted-foreground">Available: {formatUsd(cashUsd)}</span>
-      </div>
-    </div>
   );
 }
