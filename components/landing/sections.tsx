@@ -23,7 +23,7 @@ import {
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AvatarRow, Arrow, DropTime, GlowButton, Stars, VerifiedBadge } from "./primitives";
-import { useCountdown } from "./chrome";
+import { useCountdown, usePrimaryCtaHref } from "./chrome";
 
 const WON_BASE = 3261863;
 const WON_KEY = "oddlytics-personal-won";
@@ -53,6 +53,7 @@ function usePersonalWonCounter() {
 
 export function Hero() {
   const won = usePersonalWonCounter();
+  const ctaHref = usePrimaryCtaHref();
   return (
     <section className="relative px-6 pb-24 pt-14 text-center">
       <div className="mx-auto max-w-5xl">
@@ -79,7 +80,7 @@ export function Hero() {
         </p>
 
         <div className="reveal mt-10 flex justify-center">
-          <GlowButton href="/signup" variant="light" size="lg" seesaw className="px-16 py-6">
+          <GlowButton href={ctaHref} variant="light" size="lg" seesaw className="px-16 py-6">
             Start winning smarter <Arrow />
           </GlowButton>
         </div>
@@ -106,6 +107,7 @@ const STEPS: { icon: LucideIcon; title: string; body: string }[] = [
 ];
 
 export function Steps() {
+  const ctaHref = usePrimaryCtaHref();
   return (
     <section className="relative px-6 py-24">
       <div className="mx-auto max-w-4xl text-center">
@@ -142,7 +144,7 @@ export function Steps() {
         </div>
 
         <div className="mt-10 flex justify-center">
-          <GlowButton href="/signup" variant="light" size="lg" className="px-14">
+          <GlowButton href={ctaHref} variant="light" size="lg" className="px-14">
             Start winning smarter <Arrow />
           </GlowButton>
         </div>

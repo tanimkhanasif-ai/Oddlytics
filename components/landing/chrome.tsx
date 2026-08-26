@@ -6,6 +6,13 @@ import { X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { DropTime, GlowButton, Logo } from "./primitives";
 
+/** Where the primary "Start winning smarter" CTA should go — straight to the
+ *  dashboard for a signed-in visitor, signup for everyone else. */
+export function usePrimaryCtaHref(): "/dashboard" | "/signup" {
+  const { status } = useSession();
+  return status === "authenticated" ? "/dashboard" : "/signup";
+}
+
 /** Looping countdown: counts down from 4:52:09 and restarts when it hits zero. */
 export function useCountdown(initialSeconds = 4 * 3600 + 52 * 60 + 9) {
   const [seconds, setSeconds] = useState(initialSeconds);
