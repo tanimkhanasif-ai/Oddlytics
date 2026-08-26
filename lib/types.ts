@@ -29,6 +29,8 @@ export interface AnalysisResult {
   _mock?: boolean;
   _yesPrice?: number;
   _noPrice?: number;
+  /** A Polymarket Gamma event id or Kalshi ticker, when this came from a live quote (not a screenshot). Lets "Paper trade this pick" re-price the position with real live data later. */
+  _marketId?: string;
 }
 
 export interface MarketQuote {
@@ -37,6 +39,8 @@ export interface MarketQuote {
   yesPrice: number;
   noPrice: number;
   url?: string;
+  /** A Polymarket Gamma event id or Kalshi ticker, for live re-pricing later (e.g. if this quote becomes a Paper Trading position). */
+  id?: string;
 }
 
 export interface ChatMessage {
@@ -48,6 +52,8 @@ export interface PaperPosition {
   id: string;
   marketQuestion: string;
   platform: Platform;
+  /** A Polymarket Gamma event id or Kalshi ticker, when the position was opened against a real, currently-resolvable market. */
+  marketId?: string | null;
   side: "YES" | "NO";
   entryPrice: number;
   sizeUsd: number;
@@ -57,6 +63,8 @@ export interface PaperPosition {
   exitPrice?: number;
   source?: "manual" | "analyzer" | "copy-trading";
   sourceTraderAddress?: string;
+  /** Server-attached: the real current price for open positions with a marketId, refetched on every GET. Null/absent falls back to the simulated walk. */
+  livePrice?: number | null;
 }
 
 export interface PaperTradingState {

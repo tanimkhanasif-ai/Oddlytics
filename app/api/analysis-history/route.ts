@@ -4,7 +4,7 @@ import { requireUserId } from "@/lib/session";
 
 export const runtime = "nodejs";
 
-const MAX_ITEMS = 10;
+const MAX_ITEMS = 500;
 
 export async function GET() {
   const userId = await requireUserId();
@@ -15,7 +15,9 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     take: MAX_ITEMS,
   });
-  return NextResponse.json({ history: records.map((r) => r.data) });
+  return NextResponse.json({
+    history: records.map((r) => ({ id: r.id, analyzedAt: r.createdAt, result: r.data })),
+  });
 }
 
 export async function POST(req: NextRequest) {

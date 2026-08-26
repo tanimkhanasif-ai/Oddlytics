@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
         question: m.question,
         yesPrice,
         noPrice: 1 - yesPrice,
+        marketId: m.id,
         capitalUsd,
       });
     })

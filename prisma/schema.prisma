@@ -36,6 +36,11 @@ model PaperPosition {
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   marketQuestion      String
   platform            String
+  /// Real market identifier for live re-pricing: a Polymarket Gamma event id,
+  /// or a Kalshi ticker. Null when the position wasn't opened against a real,
+  /// currently-resolvable market (e.g. a screenshot-only analyzer pick, or a
+  /// manually typed position) — those keep the simulated price walk.
+  marketId            String?
   side                String
   entryPrice          Float
   sizeUsd             Float

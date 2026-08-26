@@ -53,7 +53,7 @@ function PaperTrading() {
   const unrealizedPnl = useMemo(
     () =>
       openPositions.reduce((sum, p) => {
-        const current = simulateCurrentPrice(p.id, p.entryPrice, p.openedAt);
+        const current = p.livePrice ?? simulateCurrentPrice(p.id, p.entryPrice, p.openedAt);
         return sum + ((p.sizeUsd / p.entryPrice) * current - p.sizeUsd);
       }, 0),
     [openPositions],
@@ -207,7 +207,8 @@ function PositionRow({
   position: PaperPosition;
   onClose: (id: string, exitPrice: number) => void;
 }) {
-  const current = simulateCurrentPrice(position.id, position.entryPrice, position.openedAt);
+  const isLive = position.livePrice != null;
+  const current = position.livePrice ?? simulateCurrentPrice(position.id, position.entryPrice, position.openedAt);
   const pnl = (position.sizeUsd / position.entryPrice) * current - position.sizeUsd;
   const up = pnl >= 0;
 
@@ -226,7 +227,9 @@ function PositionRow({
       </div>
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <p className="text-xs text-muted-foreground">Current</p>
+          <p className="text-xs text-muted-foreground">
+            Current {isLive && <span className="text-up">· live</span>}
+          </p>
           <p className="text-sm text-foreground">{(current * 100).toFixed(0)}¢</p>
         </div>
         <div className="text-right">
@@ -262,12 +265,14 @@ function TradeForm({
   const [side, setSide] = useState<"YES" | "NO">("YES");
   const [entryCents, setEntryCents] = useState("50");
   const [size, setSize] = useState("100");
+  const [marketId, setMarketId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!prefill) return;
     setQuestion(prefill.question);
     setPlatform(prefill.platform);
     setEntryCents(String(prefill.outcomes[0]?.pricePct ?? 50));
+    setMarketId(prefill.id);
     onConsumePrefill();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill]);
@@ -276,8 +281,9 @@ function TradeForm({
     const entryPrice = Number(entryCents) / 100;
     const sizeUsd = Number(size);
     if (!question.trim() || !entryPrice || entryPrice <= 0 || entryPrice >= 1 || !sizeUsd) return;
-    onOpen({ marketQuestion: question.trim(), platform, side, entryPrice, sizeUsd });
+    onOpen({ marketQuestion: question.trim(), platform, marketId, side, entryPrice, sizeUsd });
     setQuestion("");
+    setMarketId(undefined);
   }
 
   const field =
@@ -290,7 +296,10 @@ function TradeForm({
       </p>
       <input
         value={question}
-        onChange={(e) => setQuestion(e.target.value)}
+        onChange={(e) => {
+          setQuestion(e.target.value);
+          setMarketId(undefined);
+        }}
         placeholder="Market question"
         className={field}
       />

@@ -7,8 +7,14 @@ import PlatformBadge from "@/components/PlatformBadge";
 import { useCopyTrading } from "@/lib/hooks/useCopyTrading";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
-import type { TopTrader } from "@/lib/types";
+import type { TopTrader, TraderTrade } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
+
+const LEADERBOARD_SIZE = 25;
+/** A trade counts as "live" if it happened within this window. Polymarket's public
+ *  API exposes trade history, not an open-positions feed, so recency is the closest
+ *  honest proxy for "what this trader is doing right now." */
+const LIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const TINTS = [
   "bg-up/25 text-up",
@@ -46,9 +52,10 @@ function CopyTrading() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/traders/leaderboard?period=WEEK&limit=12")
+    fetch(`/api/traders/leaderboard?period=WEEK&limit=${LEADERBOARD_SIZE}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
@@ -70,7 +77,7 @@ function CopyTrading() {
       const price =
         p.status === "closed"
           ? p.exitPrice ?? p.entryPrice
-          : simulateCurrentPrice(p.id, p.entryPrice, p.openedAt);
+          : p.livePrice ?? simulateCurrentPrice(p.id, p.entryPrice, p.openedAt);
       return sum + ((p.sizeUsd / p.entryPrice) * price - p.sizeUsd);
     }, 0);
 
@@ -111,7 +118,14 @@ function CopyTrading() {
       </button>
 
       <div className="glass-panel overflow-hidden rounded-3xl p-5">
-        <h2 className="font-semibold text-foreground">Select Trader</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-foreground">Top 25 traders</h2>
+          <PlatformBadge platform="polymarket" size="xs" />
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Real, live Polymarket leaderboard data. Kalshi accounts are private and have no public
+          trader API, so Copy Trading can only offer real traders from Polymarket.
+        </p>
 
         {loading && <p className="mt-3 text-sm text-muted-foreground">Loading leaderboard…</p>}
         {error && (
@@ -132,6 +146,10 @@ function CopyTrading() {
                   onFollow={(amount) => follow(t.walletAddress, t.name, amount)}
                   onUnfollow={() => unfollow(t.walletAddress)}
                   disabled={!hydrated}
+                  expanded={expanded === t.walletAddress}
+                  onToggleExpand={() =>
+                    setExpanded(expanded === t.walletAddress ? null : t.walletAddress)
+                  }
                 />
               ))}
             </div>
@@ -208,6 +226,8 @@ function TraderRow({
   onFollow,
   onUnfollow,
   disabled,
+  expanded,
+  onToggleExpand,
 }: {
   trader: TopTrader;
   index: number;
@@ -215,6 +235,8 @@ function TraderRow({
   onFollow: (allocationUsd: number) => void;
   onUnfollow: () => void;
   disabled: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [allocation, setAllocation] = useState("100");
@@ -222,59 +244,117 @@ function TraderRow({
   const positive = trader.pnl >= 0;
 
   return (
-    <div className="flex items-center gap-4 py-3.5 transition-colors duration-200 hover:bg-foreground/[0.03]">
-      <span
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
-          TINTS[index % TINTS.length]
-        }`}
-      >
-        {initialsFor(name)}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">
-          #{trader.rank} {name}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {trader.followerCount} Copier{trader.followerCount === 1 ? "" : "s"} ·{" "}
-          {formatUsd(trader.volume)} volume
-        </p>
-      </div>
-      <span className={`text-base font-bold ${positive ? "text-up" : "text-down"}`}>
-        {formatUsd(trader.pnl)}
-      </span>
-      {following ? (
-        <button onClick={onUnfollow} className="ghost-button px-3 py-1.5 text-xs">
-          Unfollow
-        </button>
-      ) : open ? (
-        <span className="flex items-center gap-2">
-          <input
-            value={allocation}
-            onChange={(e) => setAllocation(e.target.value)}
-            inputMode="decimal"
-            className="w-20 rounded-lg border border-brand/25 bg-brand/[0.05] px-2 py-1 text-xs text-foreground outline-none"
-          />
+    <div>
+      <div className="flex items-center gap-4 py-3.5 transition-colors duration-200 hover:bg-foreground/[0.03]">
+        <span
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
+            TINTS[index % TINTS.length]
+          }`}
+        >
+          {initialsFor(name)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-foreground">
+            #{trader.rank} {name}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {trader.followerCount} Copier{trader.followerCount === 1 ? "" : "s"} ·{" "}
+            {formatUsd(trader.volume)} volume
+          </p>
+        </div>
+        <span className={`text-base font-bold ${positive ? "text-up" : "text-down"}`}>
+          {formatUsd(trader.pnl)}
+        </span>
+        {following ? (
+          <button onClick={onUnfollow} className="ghost-button px-3 py-1.5 text-xs">
+            Unfollow
+          </button>
+        ) : open ? (
+          <span className="flex items-center gap-2">
+            <input
+              value={allocation}
+              onChange={(e) => setAllocation(e.target.value)}
+              inputMode="decimal"
+              className="w-20 rounded-lg border border-brand/25 bg-brand/[0.05] px-2 py-1 text-xs text-foreground outline-none"
+            />
+            <button
+              onClick={() => {
+                const amount = Number(allocation);
+                if (amount > 0) onFollow(amount);
+                setOpen(false);
+              }}
+              disabled={disabled}
+              className="ghost-button px-3 py-1.5 text-xs disabled:opacity-50"
+            >
+              Confirm
+            </button>
+          </span>
+        ) : (
           <button
-            onClick={() => {
-              const amount = Number(allocation);
-              if (amount > 0) onFollow(amount);
-              setOpen(false);
-            }}
+            onClick={() => setOpen(true)}
             disabled={disabled}
             className="ghost-button px-3 py-1.5 text-xs disabled:opacity-50"
           >
-            Confirm
+            Follow
           </button>
-        </span>
-      ) : (
+        )}
         <button
-          onClick={() => setOpen(true)}
-          disabled={disabled}
-          className="ghost-button px-3 py-1.5 text-xs disabled:opacity-50"
+          onClick={onToggleExpand}
+          aria-label="View live trades"
+          className="text-muted-foreground transition-transform hover:text-foreground"
         >
-          Follow
+          <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
         </button>
-      )}
+      </div>
+      {expanded && <LiveTradesPanel address={trader.walletAddress} />}
+    </div>
+  );
+}
+
+function LiveTradesPanel({ address }: { address: string }) {
+  const [trades, setTrades] = useState<TraderTrade[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/traders/${address}/trades?limit=15`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        const all: TraderTrade[] = data.trades ?? [];
+        const cutoff = Date.now() - LIVE_WINDOW_MS;
+        setTrades(all.filter((t) => t.timestampMs >= cutoff));
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load live trades."));
+  }, [address]);
+
+  if (error) return <p className="pb-4 text-xs text-down">{error}</p>;
+  if (!trades) return <p className="pb-4 text-xs text-muted-foreground">Loading live trades…</p>;
+  if (trades.length === 0)
+    return <p className="pb-4 text-xs text-muted-foreground">No live trades at the moment.</p>;
+
+  return (
+    <div className="space-y-2 pb-4">
+      {trades.map((t, i) => (
+        <div key={i} className="rounded-xl border border-border bg-background/40 p-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <PlatformBadge platform="polymarket" size="xs" />
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                t.side === "SELL" ? "bg-down/20 text-down" : "bg-up/20 text-up"
+              }`}
+            >
+              {t.side ?? "TRADE"} {t.outcome ?? ""}
+            </span>
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              {new Date(t.timestampMs).toLocaleString()}
+            </span>
+          </div>
+          <p className="mt-2 text-foreground/90">{t.question ?? t.market}</p>
+          <p className="mt-0.5 text-muted-foreground">
+            {formatUsd(t.size)} @ {(t.price * 100).toFixed(0)}¢
+          </p>
+        </div>
+      ))}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, requireSubscriber } from "@/lib/session";
+import { fetchLiveYesPrice } from "@/lib/markets/livePrice";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,19 @@ export async function GET() {
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.paperPosition.findMany({ where: { userId }, orderBy: { openedAt: "desc" } }),
   ]);
-  return NextResponse.json({ cashUsd: user?.cashUsd ?? 0, positions });
+
+  // Real live prices for open positions that have a resolvable market id.
+  // Positions without one (screenshots, manual entries) get livePrice: null
+  // and the client falls back to the simulated walk.
+  const withLivePrice = await Promise.all(
+    positions.map(async (p) => ({
+      ...p,
+      livePrice:
+        p.status === "open" ? await fetchLiveYesPrice(p.platform, p.marketId) : null,
+    }))
+  );
+
+  return NextResponse.json({ cashUsd: user?.cashUsd ?? 0, positions: withLivePrice });
 }
 
 export async function POST(req: NextRequest) {
@@ -28,7 +41,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.action === "open") {
-    const { marketQuestion, platform, side, entryPrice, sizeUsd, source, sourceTraderAddress } = body;
+    const { marketQuestion, platform, marketId, side, entryPrice, sizeUsd, source, sourceTraderAddress } =
+      body;
     if (
       typeof marketQuestion !== "string" ||
       typeof platform !== "string" ||
@@ -52,6 +66,7 @@ export async function POST(req: NextRequest) {
           userId,
           marketQuestion,
           platform,
+          marketId: typeof marketId === "string" ? marketId : null,
           side,
           entryPrice,
           sizeUsd,

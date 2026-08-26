@@ -36,6 +36,7 @@ interface AnalyzeLiveMarketInput {
   question: string;
   yesPrice: number;
   noPrice: number;
+  marketId?: string;
   capitalUsd?: number;
 }
 
@@ -49,12 +50,13 @@ export async function analyzeLiveMarket({
   question,
   yesPrice,
   noPrice,
+  marketId,
   capitalUsd,
 }: AnalyzeLiveMarketInput): Promise<AnalysisResult> {
   if (!process.env.ANTHROPIC_API_KEY) {
     await delay(300 + Math.random() * 300);
     const mock = generateMockAnalysis({ question, platform, yesPrice, noPrice, capitalUsd });
-    return { ...mock.result, _yesPrice: mock.yesPrice, _noPrice: mock.noPrice };
+    return { ...mock.result, _yesPrice: mock.yesPrice, _noPrice: mock.noPrice, _marketId: marketId };
   }
 
   const userContent: Anthropic.MessageParam["content"] = [
@@ -83,5 +85,5 @@ export async function analyzeLiveMarket({
     throw new Error("The model's response didn't match the expected analysis shape.");
   }
 
-  return { ...parsed, _yesPrice: yesPrice, _noPrice: noPrice };
+  return { ...parsed, _yesPrice: yesPrice, _noPrice: noPrice, _marketId: marketId };
 }

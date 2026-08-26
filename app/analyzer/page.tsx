@@ -79,6 +79,7 @@ function Analyzer() {
           question: quote.question,
           yesPrice: quote.yesPrice,
           noPrice: quote.noPrice,
+          marketId: quote.id,
           capitalUsd,
         }),
       });

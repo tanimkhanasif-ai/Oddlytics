@@ -128,6 +128,7 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
     const ok = await openPosition({
       marketQuestion: result.market_question,
       platform: result.platform,
+      marketId: result._marketId,
       side: result.recommendation,
       entryPrice,
       sizeUsd,

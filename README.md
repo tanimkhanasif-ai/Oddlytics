@@ -194,6 +194,34 @@ curl -H "authorization: Bearer $CRON_SECRET" https://<your-domain>/api/cron/hand
 Non-subscribers see the first 3 picks with the reasoning hidden; subscribers see all 10 with the
 full analysis, risks and exit plan.
 
+#### Manual publish path (image-curated picks)
+
+`curateWeeklyPicks()` isn't the only way to fill this table. `publishManualPicks()`
+(`lib/handpicks.ts`) takes a pre-analyzed batch of picks — e.g. from market screenshots handed to
+Claude directly in chat instead of the automated live-market scan — and publishes them the exact
+same way: filtered to `MIN_CONFIDENCE`, ranked by edge, capped at `PICK_COUNT`, replacing this
+week's set. It's exposed at `POST /api/admin/handpicks`, gated by the same `CRON_SECRET` bearer
+token as the cron route:
+
+```bash
+curl -X POST https://<your-domain>/api/admin/handpicks \
+  -H "authorization: Bearer $CRON_SECRET" \
+  -H "content-type: application/json" \
+  -d '{"picks": [
+    {
+      "platform": "polymarket",
+      "marketId": "some-market-slug-or-ticker",
+      "question": "Will X happen by Y?",
+      "url": "https://polymarket.com/event/...",
+      "marketPct": 62,
+      "analysis": { "...": "a full AnalysisResult, matching lib/types.ts" }
+    }
+  ]}'
+```
+
+Both paths write to the same table and the page can't tell them apart — whichever ran most
+recently for the current week wins.
+
 ## Project layout
 
 ```

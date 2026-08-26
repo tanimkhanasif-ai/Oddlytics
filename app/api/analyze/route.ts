@@ -44,8 +44,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { mode, platform, question, yesPrice, noPrice, imageBase64, imageMediaType, capitalUsd } =
-    body as Record<string, unknown>;
+  const {
+    mode,
+    platform,
+    question,
+    yesPrice,
+    noPrice,
+    marketId,
+    imageBase64,
+    imageMediaType,
+    capitalUsd,
+  } = body as Record<string, unknown>;
 
   const isScreenshot = mode === "screenshot";
 
@@ -86,6 +95,7 @@ export async function POST(req: NextRequest) {
       ...mock.result,
       _yesPrice: mock.yesPrice,
       _noPrice: mock.noPrice,
+      _marketId: isScreenshot ? undefined : (marketId as string | undefined),
     });
   }
 
@@ -161,6 +171,7 @@ export async function POST(req: NextRequest) {
       ...parsed,
       _yesPrice: isScreenshot ? undefined : (yesPrice as number),
       _noPrice: isScreenshot ? undefined : (noPrice as number),
+      _marketId: isScreenshot ? undefined : (marketId as string | undefined),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Analysis failed.";
