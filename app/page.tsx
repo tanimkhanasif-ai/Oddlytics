@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { Faqs, Features, Hero, Pricing, ProfitCalculator, Steps } from "@/components/landing/sections";
 import { Footer, Nav, OfferBar, WinToast } from "@/components/landing/chrome";
 
@@ -15,7 +18,10 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getServerSession(authOptions);
+  if (session?.user) redirect("/dashboard");
+
   return (
     <div className="aurora min-h-screen overflow-x-clip font-sans">
       <OfferBar />
