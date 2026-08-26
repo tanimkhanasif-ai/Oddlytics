@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Link2, TrendingUp, Wand2 } from "lucide-react";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import FeatureGate from "@/components/FeatureGate";
@@ -34,6 +34,7 @@ function Analyzer() {
   const [analyzing, setAnalyzing] = useState(false);
   const [findingBest, setFindingBest] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [limitResetAt, setLimitResetAt] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
   const { record } = useAnalysisHistory();
@@ -68,6 +69,7 @@ function Analyzer() {
   async function handleAnalyzeLive() {
     if (!quote) return;
     setAnalyzeError(null);
+    setLimitResetAt(null);
     setAnalyzing(true);
     try {
       const res = await fetch("/api/analyze", {
@@ -84,7 +86,13 @@ function Analyzer() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Analysis failed.");
+      if (!res.ok) {
+        if (data.limitExceeded) {
+          setLimitResetAt(data.resetAt);
+          return;
+        }
+        throw new Error(data.error || "Analysis failed.");
+      }
       setResult(data);
       record(data);
     } catch (err) {
@@ -98,6 +106,7 @@ function Analyzer() {
     if (!file) return;
     setResult(null);
     setAnalyzeError(null);
+    setLimitResetAt(null);
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
@@ -112,7 +121,13 @@ function Analyzer() {
           body: JSON.stringify({ mode: "screenshot", imageBase64: base64, imageMediaType: mediaType, capitalUsd }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Analysis failed.");
+        if (!res.ok) {
+          if (data.limitExceeded) {
+            setLimitResetAt(data.resetAt);
+            return;
+          }
+          throw new Error(data.error || "Analysis failed.");
+        }
         setResult(data);
         record(data);
       } catch (err) {
@@ -126,6 +141,7 @@ function Analyzer() {
 
   async function handleFindBestBet() {
     setAnalyzeError(null);
+    setLimitResetAt(null);
     setResult(null);
     setFindingBest(true);
     try {
@@ -135,7 +151,13 @@ function Analyzer() {
         body: JSON.stringify({ capitalUsd }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Couldn't find a pick right now.");
+      if (!res.ok) {
+        if (data.limitExceeded) {
+          setLimitResetAt(data.resetAt);
+          return;
+        }
+        throw new Error(data.error || "Couldn't find a pick right now.");
+      }
       setResult(data);
       record(data);
     } catch (err) {
@@ -184,6 +206,7 @@ function Analyzer() {
             size="md"
             className="mx-auto mt-7"
             onClick={() => fileInputRef.current?.click()}
+            disabled={!!limitResetAt}
           >
             {analyzing ? "Analyzing…" : "Click here to add a market"} <Arrow />
           </GlowButton>
@@ -240,7 +263,12 @@ function Analyzer() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   YES {(quote.yesPrice * 100).toFixed(1)}¢ · NO {(quote.noPrice * 100).toFixed(1)}¢
                 </p>
-                <GlowButton size="sm" className="mt-3" onClick={handleAnalyzeLive}>
+                <GlowButton
+                  size="sm"
+                  className="mt-3"
+                  onClick={handleAnalyzeLive}
+                  disabled={!!limitResetAt}
+                >
                   {analyzing ? "Analyzing…" : "Run AI analysis"}
                 </GlowButton>
               </div>
@@ -261,15 +289,57 @@ function Analyzer() {
           />
         </div>
 
-        <GlowButton onClick={handleFindBestBet} className="mt-3 w-full py-3.5 text-base">
+        <GlowButton
+          onClick={handleFindBestBet}
+          className="mt-3 w-full py-3.5 text-base"
+          disabled={!!limitResetAt}
+        >
           <Wand2 className="h-4 w-4" />
           {findingBest ? "Scanning live markets…" : "Find me the perfect bet"}
         </GlowButton>
 
         {analyzeError && <p className="mt-3 text-sm text-down">{analyzeError}</p>}
+        {limitResetAt && (
+          <Countdown resetAt={limitResetAt} onExpire={() => setLimitResetAt(null)} />
+        )}
       </div>
 
       {result && <AnalysisResultView result={result} />}
+    </div>
+  );
+}
+
+function Countdown({ resetAt, onExpire }: { resetAt: string; onExpire: () => void }) {
+  const [remainingMs, setRemainingMs] = useState(() => Math.max(0, new Date(resetAt).getTime() - Date.now()));
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const ms = new Date(resetAt).getTime() - Date.now();
+      if (ms <= 0) {
+        clearInterval(id);
+        onExpire();
+      } else {
+        setRemainingMs(ms);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [resetAt, onExpire]);
+
+  const totalSeconds = Math.ceil(remainingMs / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    <div className="mt-3 rounded-xl border border-brand/30 bg-brand/[0.05] p-4 text-center">
+      <p className="text-sm font-semibold text-foreground">Analysis limit reached</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        You&apos;ve used all 10 analyses for this 12-hour period. Next slot opens in:
+      </p>
+      <p className="mt-2 text-2xl font-bold tabular-nums text-brand">
+        {pad(h)}:{pad(m)}:{pad(s)}
+      </p>
     </div>
   );
 }

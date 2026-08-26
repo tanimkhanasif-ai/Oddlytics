@@ -2,31 +2,30 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import type { CopyTradingFollow } from "@/lib/types";
 
-export interface MirroredTradeEvent {
+export interface MarketFollowRow {
+  id: string;
   platform: string;
-  traderLabel: string;
+  marketId: string;
   question: string;
-  outcome: string | null;
-  price: number;
-  sizeUsd: number;
-  at: string;
+  url: string | null;
+  allocationUsd: number;
+  followedAt: string;
+  lastAnalyzedAt: string | null;
 }
 
-export function useCopyTrading() {
+/** "Copy a Kalshi market" — mirrors the AI's own read on a followed market into virtual paper trades, since Kalshi has no public trader data to copy instead. */
+export function useMarketFollow() {
   const { status } = useSession();
-  const [follows, setFollows] = useState<CopyTradingFollow[]>([]);
-  const [feed, setFeed] = useState<MirroredTradeEvent[]>([]);
+  const [follows, setFollows] = useState<MarketFollowRow[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
   const refresh = useCallback(async () => {
-    const res = await fetch("/api/copy-trading");
+    const res = await fetch("/api/market-follow");
     if (res.ok) {
       const data = await res.json();
       setFollows(data.follows ?? []);
-      setFeed(data.feed ?? []);
     }
     setHydrated(true);
   }, []);
@@ -37,11 +36,11 @@ export function useCopyTrading() {
   }, [status, refresh]);
 
   const follow = useCallback(
-    async (walletAddress: string, name: string | null, allocationUsd: number) => {
-      await fetch("/api/copy-trading", {
+    async (marketId: string, question: string, url: string | null, allocationUsd: number) => {
+      await fetch("/api/market-follow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "follow", walletAddress, name, allocationUsd }),
+        body: JSON.stringify({ action: "follow", marketId, question, url, allocationUsd }),
       });
       await refresh();
     },
@@ -49,11 +48,11 @@ export function useCopyTrading() {
   );
 
   const unfollow = useCallback(
-    async (walletAddress: string) => {
-      await fetch("/api/copy-trading", {
+    async (marketId: string) => {
+      await fetch("/api/market-follow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "unfollow", walletAddress }),
+        body: JSON.stringify({ action: "unfollow", marketId }),
       });
       await refresh();
     },
@@ -63,7 +62,7 @@ export function useCopyTrading() {
   const syncNow = useCallback(async () => {
     setSyncing(true);
     try {
-      await fetch("/api/copy-trading", {
+      await fetch("/api/market-follow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "sync" }),
@@ -74,5 +73,5 @@ export function useCopyTrading() {
     }
   }, [refresh]);
 
-  return { follows, hydrated, syncing, feed, follow, unfollow, syncNow };
+  return { follows, hydrated, syncing, follow, unfollow, syncNow };
 }

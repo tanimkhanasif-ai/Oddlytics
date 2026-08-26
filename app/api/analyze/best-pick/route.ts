@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireSubscriber } from "@/lib/session";
 import { fetchTrendingMarkets } from "@/lib/markets/topMarkets";
 import { analyzeLiveMarket } from "@/lib/analyzeMarket";
+import { checkAnalysisRateLimit, ANALYSIS_LIMIT } from "@/lib/rateLimit";
 import type { AnalysisResult } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -13,6 +14,20 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const access = await requireSubscriber();
   if (!access.ok) return access.response;
+
+  // This burns several real API calls (one per candidate market) for a single
+  // recorded result, so it's gated by the same 12h limit up front, not after.
+  const rateLimit = await checkAnalysisRateLimit(access.userId);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: `You've reached your limit of ${ANALYSIS_LIMIT} analyses for this 12-hour period.`,
+        limitExceeded: true,
+        resetAt: rateLimit.resetAt,
+      },
+      { status: 429 }
+    );
+  }
 
   const body = await req.json().catch(() => ({}));
   const capitalUsd = typeof body?.capitalUsd === "number" ? body.capitalUsd : undefined;

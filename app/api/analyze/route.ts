@@ -4,6 +4,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { getAnthropicClient, ANALYSIS_MODEL } from "@/lib/anthropic";
 import { ANALYSIS_ENGINE_SYSTEM_PROMPT } from "@/lib/prompts";
 import { generateMockAnalysis } from "@/lib/mocks/analysis";
+import { checkAnalysisRateLimit, ANALYSIS_LIMIT } from "@/lib/rateLimit";
 import type { AnalysisResult, Platform } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -38,6 +39,18 @@ function delay(ms: number) {
 export async function POST(req: NextRequest) {
   const access = await requireSubscriber();
   if (!access.ok) return access.response;
+
+  const rateLimit = await checkAnalysisRateLimit(access.userId);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: `You've reached your limit of ${ANALYSIS_LIMIT} analyses for this 12-hour period.`,
+        limitExceeded: true,
+        resetAt: rateLimit.resetAt,
+      },
+      { status: 429 }
+    );
+  }
 
   const body = await req.json().catch(() => null);
   if (!body) {

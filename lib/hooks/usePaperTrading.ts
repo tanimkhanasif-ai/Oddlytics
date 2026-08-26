@@ -95,5 +95,5 @@ export function usePaperTrading() {
     await refresh();
   }, [refresh]);
 
-  return { cashUsd, positions, hydrated, openPosition, closePosition, reset };
+  return { cashUsd, positions, hydrated, openPosition, closePosition, reset, refresh };
 }

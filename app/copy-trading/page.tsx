@@ -5,10 +5,14 @@ import { Wallet, ArrowLeftRight, ChevronDown } from "lucide-react";
 import FeatureGate from "@/components/FeatureGate";
 import PlatformBadge from "@/components/PlatformBadge";
 import { useCopyTrading } from "@/lib/hooks/useCopyTrading";
+import { useMarketFollow } from "@/lib/hooks/useMarketFollow";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
-import type { TopTrader, TraderTrade } from "@/lib/types";
+import type { TrendingMarket } from "@/lib/markets/topMarkets";
+import type { CopyTradingFollow, TopTrader, TraderTrade } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
+
+const KALSHI_MARKETS_SIZE = 12;
 
 const LEADERBOARD_SIZE = 25;
 /** A trade counts as "live" if it happened within this window. Polymarket's public
@@ -47,12 +51,24 @@ export default function CopyTradingPage() {
 function CopyTrading() {
   const { cashUsd, positions } = usePaperTrading();
   const { follows, hydrated, feed, follow, unfollow, syncNow, syncing } = useCopyTrading();
+  const {
+    follows: marketFollows,
+    hydrated: marketHydrated,
+    follow: followMarket,
+    unfollow: unfollowMarket,
+    syncNow: syncMarketsNow,
+    syncing: marketSyncing,
+  } = useMarketFollow();
 
   const [traders, setTraders] = useState<TopTrader[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  const [kalshiMarkets, setKalshiMarkets] = useState<TrendingMarket[]>([]);
+  const [kalshiLoading, setKalshiLoading] = useState(true);
+  const [kalshiError, setKalshiError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/traders/leaderboard?period=WEEK&limit=${LEADERBOARD_SIZE}`)
@@ -63,12 +79,27 @@ function CopyTrading() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load leaderboard."))
       .finally(() => setLoading(false));
+
+    fetch(`/api/markets/trending?limit=${KALSHI_MARKETS_SIZE * 2}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        const all: TrendingMarket[] = data.markets ?? [];
+        setKalshiMarkets(all.filter((m) => m.platform === "kalshi").slice(0, KALSHI_MARKETS_SIZE));
+      })
+      .catch((err) => setKalshiError(err instanceof Error ? err.message : "Failed to load Kalshi markets."))
+      .finally(() => setKalshiLoading(false));
   }, []);
 
   useEffect(() => {
     if (hydrated && follows.length > 0) syncNow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
+
+  useEffect(() => {
+    if (marketHydrated && marketFollows.length > 0) syncMarketsNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marketHydrated]);
 
   // Real P&L across positions that Copy Trading actually opened for this user.
   const mirroredPnl = positions
@@ -116,6 +147,13 @@ function CopyTrading() {
           className={`h-4 w-4 transition-transform duration-200 ${pickerOpen ? "rotate-180" : ""}`}
         />
       </button>
+
+      <PasteWalletFollow
+        follows={follows}
+        onFollow={follow}
+        onUnfollow={unfollow}
+        disabled={!hydrated}
+      />
 
       <div className="glass-panel overflow-hidden rounded-3xl p-5">
         <div className="flex items-center justify-between">
@@ -193,6 +231,68 @@ function CopyTrading() {
         </div>
       )}
 
+      <div className="glass-panel overflow-hidden rounded-3xl p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-foreground">Kalshi markets</h2>
+          <PlatformBadge platform="kalshi" size="xs" />
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Kalshi has no public trader data to copy, so follow a real live Kalshi market instead —
+          the AI mirrors its own read into a virtual paper trade whenever it clears a 70%+
+          confidence bar.
+        </p>
+
+        {kalshiLoading && <p className="mt-3 text-sm text-muted-foreground">Loading Kalshi markets…</p>}
+        {kalshiError && <p className="mt-3 text-sm text-down">{kalshiError}</p>}
+        {!kalshiLoading && !kalshiError && (
+          <div className="mt-3 divide-y divide-border">
+            {kalshiMarkets.map((m) => (
+              <KalshiMarketRow
+                key={m.id}
+                market={m}
+                following={marketFollows.some((f) => f.marketId === m.id)}
+                onFollow={(amount) => followMarket(m.id, m.question, m.url ?? null, amount)}
+                onUnfollow={() => unfollowMarket(m.id)}
+                disabled={!marketHydrated}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {marketFollows.length > 0 && (
+        <div className="glass-panel rounded-3xl p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-foreground">Following (Kalshi)</h2>
+            <button
+              onClick={() => syncMarketsNow()}
+              disabled={marketSyncing}
+              className="ghost-button px-3 py-1.5 text-xs disabled:opacity-50"
+            >
+              {marketSyncing ? "Syncing…" : "Sync now"}
+            </button>
+          </div>
+          <div className="mt-3 divide-y divide-border">
+            {marketFollows.map((f) => (
+              <div key={f.marketId} className="flex items-center justify-between py-3">
+                <div className="min-w-0 pr-3">
+                  <p className="truncate text-sm font-medium text-foreground">{f.question}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Virtual allocation: {formatUsd(f.allocationUsd)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => unfollowMarket(f.marketId)}
+                  className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Unfollow
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {feed.length > 0 && (
         <div className="glass-panel rounded-3xl p-5">
           <h2 className="font-semibold text-foreground">Mirrored trade activity</h2>
@@ -200,7 +300,7 @@ function CopyTrading() {
             {feed.map((e, i) => (
               <div key={i} className="py-3 text-sm">
                 <div className="mb-1.5 flex items-center gap-2">
-                  <PlatformBadge platform="polymarket" size="xs" />
+                  <PlatformBadge platform={e.platform} size="xs" />
                 </div>
                 <p className="text-foreground/90">
                   Mirrored {e.outcome ?? "a position"} on{" "}
@@ -214,6 +314,159 @@ function CopyTrading() {
             ))}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function PasteWalletFollow({
+  follows,
+  onFollow,
+  onUnfollow,
+  disabled,
+}: {
+  follows: CopyTradingFollow[];
+  onFollow: (walletAddress: string, name: string | null, allocationUsd: number) => void;
+  onUnfollow: (walletAddress: string) => void;
+  disabled: boolean;
+}) {
+  const [input, setInput] = useState("");
+  const [address, setAddress] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [allocation, setAllocation] = useState("100");
+
+  const following = address
+    ? follows.some((f) => f.walletAddress.toLowerCase() === address.toLowerCase())
+    : false;
+
+  return (
+    <div className="glass-panel rounded-3xl p-5">
+      <h2 className="font-semibold text-foreground">Or paste any Polymarket wallet</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Not just the leaderboard — copy any real Polymarket wallet by pasting its address, and see
+        its live trades from the last 24h.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="0x..."
+          className="flex-1 rounded-xl border border-brand/25 bg-brand/[0.05] px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-brand/50"
+        />
+        <button
+          onClick={() => {
+            const trimmed = input.trim();
+            if (trimmed) setAddress(trimmed);
+          }}
+          className="ghost-button px-4 py-2 text-sm"
+        >
+          Look up
+        </button>
+      </div>
+
+      {address && (
+        <div className="mt-4 rounded-xl border border-border bg-background/40 p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">{truncateAddress(address)}</p>
+            {following ? (
+              <button
+                onClick={() => onUnfollow(address)}
+                className="ghost-button px-3 py-1.5 text-xs"
+              >
+                Unfollow
+              </button>
+            ) : confirming ? (
+              <span className="flex items-center gap-2">
+                <input
+                  value={allocation}
+                  onChange={(e) => setAllocation(e.target.value)}
+                  inputMode="decimal"
+                  className="w-20 rounded-lg border border-brand/25 bg-brand/[0.05] px-2 py-1 text-xs text-foreground outline-none"
+                />
+                <button
+                  onClick={() => {
+                    const amount = Number(allocation);
+                    if (amount > 0) onFollow(address, null, amount);
+                    setConfirming(false);
+                  }}
+                  disabled={disabled}
+                  className="ghost-button px-3 py-1.5 text-xs disabled:opacity-50"
+                >
+                  Confirm
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() => setConfirming(true)}
+                disabled={disabled}
+                className="ghost-button px-3 py-1.5 text-xs disabled:opacity-50"
+              >
+                Copy
+              </button>
+            )}
+          </div>
+          <LiveTradesPanel address={address} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KalshiMarketRow({
+  market,
+  following,
+  onFollow,
+  onUnfollow,
+  disabled,
+}: {
+  market: TrendingMarket;
+  following: boolean;
+  onFollow: (allocationUsd: number) => void;
+  onUnfollow: () => void;
+  disabled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [allocation, setAllocation] = useState("100");
+  const pct = market.outcomes[0]?.pricePct ?? 50;
+
+  return (
+    <div className="flex items-center gap-4 py-3.5 transition-colors duration-200 hover:bg-foreground/[0.03]">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-foreground">{market.question}</p>
+        <p className="text-xs text-muted-foreground">Yes {pct}% · {formatUsd(market.volumeUsd)} volume</p>
+      </div>
+      {following ? (
+        <button onClick={onUnfollow} className="ghost-button px-3 py-1.5 text-xs">
+          Unfollow
+        </button>
+      ) : open ? (
+        <span className="flex items-center gap-2">
+          <input
+            value={allocation}
+            onChange={(e) => setAllocation(e.target.value)}
+            inputMode="decimal"
+            className="w-20 rounded-lg border border-brand/25 bg-brand/[0.05] px-2 py-1 text-xs text-foreground outline-none"
+          />
+          <button
+            onClick={() => {
+              const amount = Number(allocation);
+              if (amount > 0) onFollow(amount);
+              setOpen(false);
+            }}
+            disabled={disabled}
+            className="ghost-button px-3 py-1.5 text-xs disabled:opacity-50"
+          >
+            Confirm
+          </button>
+        </span>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          disabled={disabled}
+          className="ghost-button px-3 py-1.5 text-xs disabled:opacity-50"
+        >
+          Follow
+        </button>
       )}
     </div>
   );

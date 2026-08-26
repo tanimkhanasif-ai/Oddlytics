@@ -3,10 +3,18 @@
 import { useState } from "react";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
 import { GlowButton } from "@/components/landing/primitives";
+import PlatformBadge from "@/components/PlatformBadge";
 import type { AnalysisResult } from "@/lib/types";
 import { formatUsd } from "@/lib/utils";
 
-export default function AnalysisResultView({ result }: { result: AnalysisResult }) {
+export default function AnalysisResultView({
+  result,
+  onOpened,
+}: {
+  result: AnalysisResult;
+  /** Called after a paper position is successfully opened from this result — lets an embedding page (e.g. Paper Trading's own trade panel) refresh its own position list. */
+  onOpened?: () => void;
+}) {
   const isYes = result.recommendation === "YES";
   const canPaperTrade =
     result.recommendation === "YES"
@@ -33,7 +41,7 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               {result.platform === "screenshot" ? "From screenshot" : result.platform}
             </p>
-            <PlatformBadge platform={result.platform} />
+            <PlatformBadge platform={result.platform} variant="solid" />
             {result._mock && (
               <span className="rounded-full border border-brand/30 bg-brand/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
                 Demo data
@@ -102,14 +110,14 @@ export default function AnalysisResultView({ result }: { result: AnalysisResult 
 
       {canPaperTrade && (
         <div className="mt-5 border-t border-border pt-5">
-          <PaperTradeAction result={result} />
+          <PaperTradeAction result={result} onOpened={onOpened} />
         </div>
       )}
     </div>
   );
 }
 
-function PaperTradeAction({ result }: { result: AnalysisResult }) {
+function PaperTradeAction({ result, onOpened }: { result: AnalysisResult; onOpened?: () => void }) {
   const { openPosition, cashUsd, hydrated } = usePaperTrading();
   const [open, setOpen] = useState(false);
   const [size, setSize] = useState(
@@ -137,6 +145,7 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
     if (ok) {
       setConfirmed(true);
       setOpen(false);
+      onOpened?.();
     } else {
       setError("Not enough virtual cash for that size.");
     }
@@ -180,24 +189,6 @@ function PaperTradeAction({ result }: { result: AnalysisResult }) {
       {error && <p className="w-full text-xs text-no">{error}</p>}
     </div>
   );
-}
-
-function PlatformBadge({ platform }: { platform: string }) {
-  if (platform === "kalshi") {
-    return (
-      <span className="rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--on-brand)] shadow-[var(--glow-soft)]">
-        Kalshi
-      </span>
-    );
-  }
-  if (platform === "polymarket") {
-    return (
-      <span className="rounded-full bg-[#1652f0] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-[var(--glow-soft)]">
-        Polymarket
-      </span>
-    );
-  }
-  return null;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

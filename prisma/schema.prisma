@@ -26,6 +26,7 @@ model User {
   positions      PaperPosition[]
   trackedWallets TrackedWallet[]
   copyFollows    CopyFollow[]
+  marketFollows  MarketFollow[]
   mirroredTrades MirroredTrade[]
   analyses       AnalysisRecord[]
 }
@@ -78,10 +79,29 @@ model CopyFollow {
   @@unique([userId, walletAddress])
 }
 
+/// "Copy a Kalshi market" instead of a trader — Kalshi has no public trader
+/// data (see lib/markets/polymarketTraders.ts), so this mirrors the AI's own
+/// read on a followed market instead of another person's trades.
+model MarketFollow {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform       String
+  marketId       String
+  question       String
+  url            String?
+  allocationUsd  Float
+  followedAt     DateTime  @default(now())
+  lastAnalyzedAt DateTime?
+
+  @@unique([userId, platform, marketId])
+}
+
 model MirroredTrade {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform    String   @default("polymarket")
   traderLabel String
   question    String
   outcome     String?
