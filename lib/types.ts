@@ -81,7 +81,7 @@ export interface HandpickedBet {
 
 export interface AppConfig {
   aiEnabled: boolean;
-  paddleEnabled: boolean;
+  whopEnabled: boolean;
   googleEnabled: boolean;
 }
 

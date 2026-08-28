@@ -68,7 +68,7 @@ since this dev environment can't reach the public internet to create one.
 
 ## Demo mode (falls back to this automatically)
 
-With no `ANTHROPIC_API_KEY` and no Paddle keys set:
+With no `ANTHROPIC_API_KEY` and no Whop keys set:
 
 - `/api/analyze` returns a realistic **mocked** response matching the real output schema, with a
   short artificial delay so it feels like a network call. Every mocked `AnalysisResult` is flagged
@@ -78,7 +78,7 @@ With no `ANTHROPIC_API_KEY` and no Paddle keys set:
 - The Sidebar shows a **Demo mode** / **Live** pill (from `GET /api/config`, AI-key state only) so
   it's always obvious which mode the AI features are in.
 
-Each piece falls back independently — you can have real Paddle payments live while AI stays
+Each piece falls back independently — you can have real Whop payments live while AI stays
 mocked, or vice versa.
 
 ## Connecting real data — step by step
@@ -97,39 +97,41 @@ mocked, or vice versa.
 4. Optional: override `ANALYSIS_MODEL` in `.env.local` if you want a different model than the
    default (`claude-sonnet-5`).
 
-### 2. Paddle (Handpicked Bets + Pricing paywall)
+### 2. Whop (Handpicked Bets + Pricing paywall)
 
-Paddle Billing's checkout model is different from Stripe's: instead of the server creating a
-redirect session, **Paddle.js** opens an in-page overlay checkout directly from the browser
-(`Paddle.Checkout.open(...)`, via the `@paddle/paddle-js` package) — there's no redirect for the
-real path.
+Whop is a Merchant of Record — it's legally the seller on every transaction, so it collects and
+remits sales tax/VAT worldwide for you, and (unlike Stripe) supports sellers based in countries
+like Bangladesh. Checkout is an **embedded** flow: the server opens a checkout session carrying
+your internal user id as metadata, then `@whop/checkout`'s `WhopCheckoutEmbed` renders it in a
+modal on the client — no full-page redirect either way.
 
-1. Create a Paddle account and a Product + Price for the subscription. **Start in sandbox** —
-   Paddle's sandbox is a fully separate environment from production with its own keys/prices.
+1. Create a Whop account and a Plan for the subscription (**Company → Products → Plans**).
+   **Start in sandbox** — set `WHOP_SANDBOX`-equivalent by using a sandbox company, a fully
+   separate environment from production with its own keys/plans.
 2. In `.env.local`, set:
    ```
-   NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=...   # client-side token, safe to expose in the browser
-   NEXT_PUBLIC_PADDLE_PRICE_ID=...
-   NEXT_PUBLIC_PADDLE_ENV=sandbox        # or "production"
+   WHOP_API_KEY=...          # server API key, from Developer → API Keys
+   WHOP_PLAN_ID=plan_...      # the plan you created
+   NEXT_PUBLIC_WHOP_ENV=sandbox   # or "production"
    ```
    This alone is enough to switch the Pricing/Handpicked Bets buttons from the mocked checkout to
-   the real overlay (`lib/hooks/usePaddleCheckout.ts` checks these are set — no code changes
-   needed). After the overlay reports `checkout.completed`, the page polls `GET /api/subscription`
-   for a few seconds waiting for the webhook below to land, since there's no redirect to carry a
-   "success" signal back.
-3. To make the webhook actually persist the subscription, also get a server API key and set:
+   the real embedded checkout (`app/api/whop/checkout-session/route.ts` checks these are set — no
+   code changes needed). After the embed reports `onComplete`, the page polls
+   `GET /api/subscription` for a few seconds waiting for the webhook below to land, since
+   completion inside the embed doesn't itself update our database.
+3. To make the webhook actually persist the subscription, also set:
    ```
-   PADDLE_API_KEY=...
-   PADDLE_WEBHOOK_SECRET=...
+   WHOP_WEBHOOK_SECRET=ws_...
    ```
-   then point a Paddle notification destination at `POST /api/paddle/webhook` (Paddle's dashboard
-   → Developer Tools → Notifications) and paste its signing secret into `PADDLE_WEBHOOK_SECRET`.
-4. `app/api/paddle/webhook/route.ts` verifies the signature (`paddle.webhooks.unmarshal`), and on
-   `subscription.activated` reads `customData.userId` (passed into `Checkout.open()` when the
-   button was clicked) to set `subscribed: true` + store `paddleCustomerId` on that user;
-   `subscription.canceled` / `subscription.past_due` flip it back off by looking the user up via
-   `paddleCustomerId`.
-5. Only switch `NEXT_PUBLIC_PADDLE_ENV` to `production` (with production keys/price) after a
+   then create a webhook endpoint pointed at `POST /api/whop/webhook` (Whop dashboard → Developer
+   → Webhooks) subscribed to `membership.activated` and `membership.deactivated`, and paste its
+   signing secret into `WHOP_WEBHOOK_SECRET`.
+4. `app/api/whop/webhook/route.ts` verifies the signature (`unwrapWebhook` from `@whop/sdk/helpers`,
+   using the Standard Webhooks scheme), and on `membership.activated` reads `metadata.userId`
+   (attached when the checkout session was created) to set `subscribed: true` + store
+   `whopMembershipId` on that user; `membership.deactivated` flips it back off by looking the user
+   up via `whopMembershipId` as a fallback when metadata isn't present.
+5. Only switch `NEXT_PUBLIC_WHOP_ENV` to `production` (with a production plan/keys) after a
    sandbox checkout has been verified working end-to-end.
 
 ### 3. Google sign-in (optional)
@@ -273,18 +275,20 @@ app/
   api/analysis-history/route.ts     DB-backed recent-analyses list
   api/subscription/route.ts         DB-backed paywall state
   api/account/route.ts              display name + account-data reset
-  api/config/route.ts               exposes aiEnabled/paddleEnabled flags to the client
-  api/paddle/webhook/route.ts       real Paddle webhook, persists subscription to the DB (PADDLE_*-gated)
+  api/config/route.ts               exposes aiEnabled/whopEnabled flags to the client
+  api/whop/checkout-session/route.ts  opens a Whop checkout session carrying the user id as metadata
+  api/whop/webhook/route.ts         real Whop webhook, persists subscription to the DB (WHOP_*-gated)
 components/
   AppChrome.tsx                     picks marketing topnav vs. app sidebar vs. bare (checkout/login/signup) per route
   AuthProvider.tsx                  wraps the app in NextAuth's SessionProvider
   Nav.tsx, Sidebar.tsx, ModeBadge.tsx   marketing topnav, in-app icon sidebar, live/demo indicator
   UrgencyBanner.tsx, SocialProofToast.tsx, ExitIntentModal.tsx, ProfitCalculator.tsx, FaqAccordion.tsx
   AnalysisResultView.tsx            renders a structured analysis + "paper trade this pick"
+  checkout/WhopCheckoutModal.tsx    renders the real Whop embedded checkout (falls back to /checkout/mock when unconfigured)
 lib/
   prompts.ts                        the two system prompts, verbatim
   types.ts                          shared TypeScript types
-  anthropic.ts / paddle.ts          API client getters
+  anthropic.ts / whop.ts            API client getters
   auth.ts                           NextAuth config (credentials provider, JWT sessions)
   session.ts                        requireUserId() helper for route handlers
   prisma.ts                         Prisma client singleton
@@ -301,7 +305,6 @@ lib/
   hooks/useTrackedWallets.ts        fetches /api/wallets
   hooks/useCopyTrading.ts           fetches /api/copy-trading
   hooks/useSettings.ts              fetches /api/account (display name)
-  hooks/usePaddleCheckout.ts        loads Paddle.js + opens the real overlay checkout (falls back to /checkout/mock when unconfigured)
 prisma/
   schema.prisma                     User, PaperPosition, TrackedWallet, CopyFollow, MirroredTrade, AnalysisRecord
   migrations/                       committed migration SQL — run with `prisma migrate deploy`
@@ -318,11 +321,10 @@ middleware.ts                       redirects unauthenticated visitors to /login
 | `DIRECT_URL`             | **yes**  | —                    | Same database, Neon's **direct** (non-pooled) string; used by migrations |
 | `ANTHROPIC_API_KEY`      | no       | unset (mocked)       | Real AI Analyzer + Handpicked Bets curation |
 | `ANALYSIS_MODEL`         | no       | `claude-sonnet-5`    | —                                  |
-| `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` | no | unset (mocked)  | Real Paddle.js overlay checkout    |
-| `NEXT_PUBLIC_PADDLE_PRICE_ID`     | no | unset (mocked)  | Real Paddle.js overlay checkout    |
-| `NEXT_PUBLIC_PADDLE_ENV`          | no | `sandbox`       | `sandbox` or `production`          |
-| `PADDLE_API_KEY`         | no       | unset (webhook disabled) | Webhook signature verification |
-| `PADDLE_WEBHOOK_SECRET`  | no       | unset (webhook disabled) | Webhook signature verification |
+| `WHOP_API_KEY`           | no       | unset (mocked)  | Real Whop embedded checkout        |
+| `WHOP_PLAN_ID`           | no       | unset (mocked)  | Real Whop embedded checkout        |
+| `NEXT_PUBLIC_WHOP_ENV`   | no       | `sandbox`       | `sandbox` or `production`          |
+| `WHOP_WEBHOOK_SECRET`    | no       | unset (webhook disabled) | Webhook signature verification |
 | `CRON_SECRET`            | no       | unset (cron disabled)    | Weekly Handpicked Bets curation run |
 | `GOOGLE_CLIENT_ID`       | no       | unset (Google sign-in disabled) | From Google Cloud Console — see section 3 above |
 | `GOOGLE_CLIENT_SECRET`   | no       | unset (Google sign-in disabled) | From Google Cloud Console — see section 3 above |
@@ -333,18 +335,18 @@ middleware.ts                       redirects unauthenticated visitors to /login
    branch it deploys as Production.
 2. Set env vars in Project Settings → Environment Variables (Production + Preview):
    `DATABASE_URL` (Neon connection string), a freshly generated `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
-   set to the real deployed URL, `ANTHROPIC_API_KEY`, and the `PADDLE_*` vars (see above) once
-   you've created a Paddle product.
+   set to the real deployed URL, `ANTHROPIC_API_KEY`, and the `WHOP_*` vars (see above) once
+   you've created a Whop plan.
 3. `package.json`'s `build` script is `prisma migrate deploy && next build` — every deploy applies
    any new migrations under `prisma/migrations/` automatically before building, so there's no
    manual migration step on Vercel. (This does mean the build fails fast if `DATABASE_URL` isn't
    set — that's intentional for a real deploy.)
-4. Once the real domain exists, register `https://<your-domain>/api/paddle/webhook` as a Paddle
-   notification destination and set `PADDLE_WEBHOOK_SECRET` from the value Paddle gives you, then
+4. Once the real domain exists, register `https://<your-domain>/api/whop/webhook` as a Whop
+   webhook endpoint and set `WHOP_WEBHOOK_SECRET` from the value Whop gives you, then
    redeploy (env var changes need a new deploy to take effect).
 5. Set `CRON_SECRET` and trigger `/api/cron/handpicks` once by hand so Handpicked Bets has a
    published set before the first Monday run (see "Weekly Handpicked Bets" above).
-6. Verify: sign up, run a real AI Analyzer query, run a sandbox Paddle checkout, and confirm
+6. Verify: sign up, run a real AI Analyzer query, run a sandbox Whop checkout, and confirm
    `/settings` shows the subscription as active once the webhook lands.
 
 ## Persistence

@@ -8,7 +8,8 @@ import { GlowButton } from "@/components/landing/primitives";
 import { MoneyCounter } from "@/components/app/MoneyCounter";
 import { ProofBadge } from "@/components/app/ProofBadge";
 import { useSubscription } from "@/lib/hooks/useSubscription";
-import { paddleConfigured, usePaddleCheckout } from "@/lib/hooks/usePaddleCheckout";
+import { useAppConfig } from "@/lib/hooks/useAppConfig";
+import { WhopCheckoutModal } from "@/components/checkout/WhopCheckoutModal";
 
 const PERKS = [
   ["Unlimited AI analysis", "on any market"],
@@ -18,7 +19,7 @@ const PERKS = [
   ["Paper trading", "to refine your strategy risk-free"],
 ];
 
-/** Polls /api/subscription for up to ~10s waiting for the Paddle webhook to land. */
+/** Polls /api/subscription for up to ~10s waiting for the Whop webhook to land. */
 async function waitForSubscription(refresh: () => Promise<boolean>) {
   for (let i = 0; i < 7; i++) {
     if (await refresh()) return true;
@@ -30,28 +31,39 @@ async function waitForSubscription(refresh: () => Promise<boolean>) {
 export default function PricingPage() {
   const { data: session } = useSession();
   const { subscribed, hydrated, refresh } = useSubscription();
+  const config = useAppConfig();
+  const whopConfigured = config?.whopEnabled ?? false;
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
 
-  const { openCheckout } = usePaddleCheckout(async () => {
-    setVerifying(true);
-    await waitForSubscription(refresh);
-    setVerifying(false);
-  });
-
-  function startCheckout() {
+  async function startCheckout() {
     if (!session?.user?.id) {
       router.push("/login?callbackUrl=/pricing");
       return;
     }
-    if (paddleConfigured) {
+    if (whopConfigured) {
       setLoading(true);
-      const opened = openCheckout(session.user.id);
-      setLoading(false);
-      if (opened) return;
+      try {
+        const res = await fetch("/api/whop/checkout-session", { method: "POST" });
+        const data = await res.json();
+        if (res.ok && data.sessionId) {
+          setCheckoutSessionId(data.sessionId);
+          return;
+        }
+      } finally {
+        setLoading(false);
+      }
     }
     router.push("/checkout/mock?redirect=/pricing");
+  }
+
+  async function handleCheckoutCompleted() {
+    setCheckoutSessionId(null);
+    setVerifying(true);
+    await waitForSubscription(refresh);
+    setVerifying(false);
   }
 
   return (
@@ -112,8 +124,8 @@ export default function PricingPage() {
           </GlowButton>
         )}
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          {paddleConfigured
-            ? "Secure checkout via Paddle."
+          {whopConfigured
+            ? "Secure checkout via Whop."
             : "Test mode — no payment provider connected yet, nothing will be charged."}
         </p>
 
@@ -170,6 +182,14 @@ export default function PricingPage() {
           <MoneyCounter className="text-glow font-bold text-proof" /> won by people like you
         </p>
       </div>
+
+      {checkoutSessionId && (
+        <WhopCheckoutModal
+          sessionId={checkoutSessionId}
+          onClose={() => setCheckoutSessionId(null)}
+          onCompleted={handleCheckoutCompleted}
+        />
+      )}
     </div>
   );
 }

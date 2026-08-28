@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 // Google sign-in only turns on once real OAuth credentials are set — no code
-// changes needed to switch it on, same pattern as the Anthropic/Paddle gates.
+// changes needed to switch it on, same pattern as the Anthropic/Whop gates.
 const googleEnabled = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
 export const authOptions: NextAuthOptions = {

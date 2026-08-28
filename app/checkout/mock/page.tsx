@@ -28,8 +28,8 @@ function MockCheckoutInner() {
         <div>
           <p className="rounded-md bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700">
             TEST MODE — this is a mocked checkout page. No real payment is processed. Set
-            NEXT_PUBLIC_PADDLE_CLIENT_TOKEN / NEXT_PUBLIC_PADDLE_PRICE_ID to use real Paddle
-            checkout instead.
+            WHOP_API_KEY / WHOP_PLAN_ID (and WHOP_WEBHOOK_SECRET) to use real Whop checkout
+            instead.
           </p>
           <div className="mt-8 flex items-center gap-2">
             <span className="grid h-6 w-6 place-items-center rounded bg-gray-900 text-xs font-bold text-white">

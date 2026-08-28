@@ -22,7 +22,7 @@ model User {
 
   cashUsd          Float   @default(100000)
   subscribed       Boolean @default(false)
-  paddleCustomerId String? @unique
+  whopMembershipId String? @unique
 
   positions      PaperPosition[]
   trackedWallets TrackedWallet[]
