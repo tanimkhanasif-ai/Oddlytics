@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   return NextResponse.json({
     aiEnabled: !!process.env.ANTHROPIC_API_KEY,
-    whopEnabled: !!(process.env.WHOP_API_KEY && process.env.WHOP_WEBHOOK_SECRET && process.env.WHOP_PLAN_ID),
+    whopEnabled: !!(process.env.WHOP_API_KEY && process.env.WHOP_PLAN_ID),
     googleEnabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
   });
 }
