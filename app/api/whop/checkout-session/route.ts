@@ -25,6 +25,7 @@ export async function POST() {
       items: [{ plan: planId }],
       metadata: { userId },
     });
+    console.log("[whop] checkout session created:", JSON.stringify(session, null, 2));
     return NextResponse.json({ sessionId: session.id });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to create checkout session.";
