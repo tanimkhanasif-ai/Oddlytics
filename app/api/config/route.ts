@@ -10,7 +10,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   return NextResponse.json({
     aiEnabled: !!process.env.ANTHROPIC_API_KEY,
-    whopEnabled: !!(process.env.WHOP_API_KEY && process.env.WHOP_PLAN_ID),
+    whopEnabled: !!process.env.WHOP_PLAN_ID,
+    // Plan IDs aren't secret — Whop's checkout embed mints its own session
+    // client-side from this, the same way Whop's own "Copy checkout link" does.
+    whopPlanId: process.env.WHOP_PLAN_ID ?? null,
     googleEnabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
   });
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ArrowRight, Check, Flame, Star, TrendingUp } from "lucide-react";
 import { GlowButton } from "@/components/landing/primitives";
@@ -28,46 +28,56 @@ async function waitForSubscription(refresh: () => Promise<boolean>) {
   return false;
 }
 
+// useSearchParams() opts a page into client-side rendering unless it's
+// isolated behind a Suspense boundary, so this stays a separate leaf
+// component rather than living directly in PricingPage.
+function CheckoutReturnWatcher({ onReturn }: { onReturn: () => void }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("checkout") !== "complete") return;
+    router.replace("/pricing");
+    onReturn();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  return null;
+}
+
 export default function PricingPage() {
   const { data: session } = useSession();
   const { subscribed, hydrated, refresh } = useSubscription();
   const config = useAppConfig();
-  const whopConfigured = config?.whopEnabled ?? false;
+  const whopConfigured = !!(config?.whopEnabled && config.whopPlanId);
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  async function startCheckout() {
+  // The Whop checkout element redirects the whole tab back here on completion
+  // (it has no in-page callback) — pick that up and poll for the webhook.
+  function handleCheckoutReturn() {
+    setVerifying(true);
+    waitForSubscription(refresh).finally(() => setVerifying(false));
+  }
+
+  function startCheckout() {
     if (!session?.user?.id) {
       router.push("/login?callbackUrl=/pricing");
       return;
     }
     if (whopConfigured) {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/whop/checkout-session", { method: "POST" });
-        const data = await res.json();
-        if (res.ok && data.sessionId) {
-          setCheckoutSessionId(data.sessionId);
-          return;
-        }
-      } finally {
-        setLoading(false);
-      }
+      setCheckoutOpen(true);
+      return;
     }
     router.push("/checkout/mock?redirect=/pricing");
   }
 
-  async function handleCheckoutCompleted() {
-    setCheckoutSessionId(null);
-    setVerifying(true);
-    await waitForSubscription(refresh);
-    setVerifying(false);
-  }
-
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-4">
+      <Suspense fallback={null}>
+        <CheckoutReturnWatcher onReturn={handleCheckoutReturn} />
+      </Suspense>
       <div className="flex justify-center">
         <span className="glass-panel inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold">
           <Flame className="h-4 w-4 text-brand" />
@@ -115,11 +125,7 @@ export default function PricingPage() {
             className="mt-6 w-full px-6 py-4 text-lg"
             seesaw
           >
-            {verifying
-              ? "Confirming your subscription…"
-              : loading
-                ? "Opening checkout…"
-                : "Try for $1 only"}{" "}
+            {verifying ? "Confirming your subscription…" : "Try for $1 only"}{" "}
             <ArrowRight className="h-5 w-5" />
           </GlowButton>
         )}
@@ -183,11 +189,11 @@ export default function PricingPage() {
         </p>
       </div>
 
-      {checkoutSessionId && (
+      {checkoutOpen && session?.user?.id && config?.whopPlanId && (
         <WhopCheckoutModal
-          sessionId={checkoutSessionId}
-          onClose={() => setCheckoutSessionId(null)}
-          onCompleted={handleCheckoutCompleted}
+          planId={config.whopPlanId}
+          userId={session.user.id}
+          onClose={() => setCheckoutOpen(false)}
         />
       )}
     </div>
