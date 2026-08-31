@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 // Opens a Whop checkout session for the signed-in user. The plan's price is
 // charged to metadata.userId once the session completes — the webhook reads
 // it back to know which Oddlytics user just subscribed.
-export async function POST() {
+export async function POST(req: Request) {
   const userId = await requireUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -19,11 +19,17 @@ export async function POST() {
     );
   }
 
+  // Whop records the checkout's browser origin from the request's Origin header,
+  // but this call is server-to-server so there is none — pass it explicitly, or
+  // the session comes back with no recorded origin and its checkout page 404s.
+  const origin = req.headers.get("origin") ?? process.env.NEXTAUTH_URL ?? undefined;
+
   try {
     const whop = getWhopClient();
     const session = await whop.checkoutSessions.create({
       items: [{ plan: planId }],
       metadata: { userId },
+      origin,
     });
     console.log("[whop] checkout session created:", JSON.stringify(session, null, 2));
     return NextResponse.json({ sessionId: session.id });
