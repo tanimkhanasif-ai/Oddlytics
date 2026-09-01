@@ -38,7 +38,8 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ url: config.purchase_url });
   } catch (err: unknown) {
-    console.log("[whop] checkout configuration creation failed:", err);
+    const body = err && typeof err === "object" && "body" in err ? (err as { body: unknown }).body : undefined;
+    console.log("[whop] checkout configuration creation failed. body:", JSON.stringify(body, null, 2));
     const message = err instanceof Error ? err.message : "Failed to create checkout configuration.";
     return NextResponse.json({ error: message }, { status: 502 });
   }
