@@ -33,10 +33,12 @@ export async function POST(req: Request) {
       redirect_url: `${origin}/pricing?checkout=complete`,
     });
     if (!config.purchase_url) {
+      console.log("[whop] checkout configuration created but no purchase_url:", JSON.stringify(config, null, 2));
       return NextResponse.json({ error: "Whop didn't return a checkout URL." }, { status: 502 });
     }
     return NextResponse.json({ url: config.purchase_url });
   } catch (err: unknown) {
+    console.log("[whop] checkout configuration creation failed:", err);
     const message = err instanceof Error ? err.message : "Failed to create checkout configuration.";
     return NextResponse.json({ error: message }, { status: 502 });
   }
