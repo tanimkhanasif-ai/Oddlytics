@@ -24,13 +24,17 @@ export async function POST(req: Request) {
   }
 
   const origin = req.headers.get("origin") ?? process.env.NEXTAUTH_URL ?? "";
+  // Whop requires an https redirect_url with no localhost exception, so on
+  // local http dev there's nothing valid to send — omit it and let Whop's
+  // own default post-checkout page show instead.
+  const redirectUrl = origin.startsWith("https://") ? `${origin}/pricing?checkout=complete` : undefined;
 
   try {
     const whop = getWhopClient();
     const config = await whop.checkoutConfigurations.create({
       plan_id: planId,
       metadata: { userId },
-      redirect_url: `${origin}/pricing?checkout=complete`,
+      redirect_url: redirectUrl,
     });
     if (!config.purchase_url) {
       console.log("[whop] checkout configuration created but no purchase_url:", JSON.stringify(config, null, 2));
