@@ -9,7 +9,6 @@ import { MoneyCounter } from "@/components/app/MoneyCounter";
 import { ProofBadge } from "@/components/app/ProofBadge";
 import { useSubscription } from "@/lib/hooks/useSubscription";
 import { useAppConfig } from "@/lib/hooks/useAppConfig";
-import { WhopCheckoutModal } from "@/components/checkout/WhopCheckoutModal";
 
 const PERKS = [
   ["Unlimited AI analysis", "on any market"],
@@ -49,26 +48,35 @@ export default function PricingPage() {
   const { data: session } = useSession();
   const { subscribed, hydrated, refresh } = useSubscription();
   const config = useAppConfig();
-  const whopConfigured = !!(config?.whopEnabled && config.whopPlanId);
+  const whopConfigured = config?.whopEnabled ?? false;
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  // The Whop checkout element redirects the whole tab back here on completion
-  // (it has no in-page callback) — pick that up and poll for the webhook.
+  // Whop's redirect_url sends the buyer's whole tab back here after checkout
+  // (no in-page callback) — pick that up and poll for the webhook.
   function handleCheckoutReturn() {
     setVerifying(true);
     waitForSubscription(refresh).finally(() => setVerifying(false));
   }
 
-  function startCheckout() {
+  async function startCheckout() {
     if (!session?.user?.id) {
       router.push("/login?callbackUrl=/pricing");
       return;
     }
     if (whopConfigured) {
-      setCheckoutOpen(true);
-      return;
+      setLoading(true);
+      try {
+        const res = await fetch("/api/whop/checkout-session", { method: "POST" });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          window.location.href = data.url;
+          return;
+        }
+      } finally {
+        setLoading(false);
+      }
     }
     router.push("/checkout/mock?redirect=/pricing");
   }
@@ -125,7 +133,11 @@ export default function PricingPage() {
             className="mt-6 w-full px-6 py-4 text-lg"
             seesaw
           >
-            {verifying ? "Confirming your subscription…" : "Try for $1 only"}{" "}
+            {verifying
+              ? "Confirming your subscription…"
+              : loading
+                ? "Opening checkout…"
+                : "Try for $1 only"}{" "}
             <ArrowRight className="h-5 w-5" />
           </GlowButton>
         )}
@@ -188,14 +200,6 @@ export default function PricingPage() {
           <MoneyCounter className="text-glow font-bold text-proof" /> won by people like you
         </p>
       </div>
-
-      {checkoutOpen && session?.user?.id && config?.whopPlanId && (
-        <WhopCheckoutModal
-          planId={config.whopPlanId}
-          userId={session.user.id}
-          onClose={() => setCheckoutOpen(false)}
-        />
-      )}
     </div>
   );
 }

@@ -101,26 +101,31 @@ mocked, or vice versa.
 
 Whop is a Merchant of Record — it's legally the seller on every transaction, so it collects and
 remits sales tax/VAT worldwide for you, and (unlike Stripe) supports sellers based in countries
-like Bangladesh. Checkout uses **Whop Elements** (`@whop/elements` / `@whop/elements-react`): the
-browser mints its own checkout session directly from the plan id and renders it in a modal via
-`<Checkout>`/`<CheckoutElement>` — no server-side session pre-creation. (An earlier version of
-this integration used the older `@whop/checkout` package, which pre-created the session on the
-server; that combination 404'd on Whop's own checkout page for this account, so it was replaced
-with the Elements flow Whop's own dashboard now generates for "Embed checkout" on a plan.)
+like Bangladesh. Checkout is a **full-page redirect**: the server creates a Whop checkout
+configuration for the plan (`checkoutConfigurations.create`) and sends the buyer to Whop's own
+generated `purchase_url` for it — not embedded on our page.
+
+This is the third integration shape tried for Whop checkout in this codebase, after two embedded
+approaches (`@whop/checkout`'s session-based `WhopCheckoutEmbed`, then `@whop/elements`'
+plan-based `<Checkout>`) both consistently 404'd ("Nothing to see here yet") on Whop's own
+checkout page for this account — reproduced even opening the URL directly on whop.com, outside
+any iframe, with a fresh session each time, after business/identity verification, ruling out
+embedding, domain, environment, and account-verification as the cause. Whop's own native product
+page checkout worked the whole time. Redirecting to Whop's own server-generated URL sidesteps
+whatever was specific to those embed paths; if it also fails, that's a strong signal the issue is
+genuinely account-level and needs Whop support, not something fixable here.
 
 1. Create a Whop account and a Plan for the subscription (**Company → Products → Plans**).
 2. In `.env.local`, set:
    ```
+   WHOP_API_KEY=...           # server API key, from Developer → API Keys
    WHOP_PLAN_ID=plan_...      # the plan you created
    ```
-   A plan id isn't secret — it's the same id Whop's own "Copy checkout link" embeds — so it's
-   exposed to the client via `GET /api/config`. Setting it is enough to switch the Pricing /
-   Handpicked Bets buttons from the mocked checkout to the real Whop embed (`whopEnabled` in
-   `app/api/config/route.ts` — no code changes needed). The checkout element has no in-page
-   completion callback; instead it redirects the whole tab to `returnUrl`
-   (`/pricing?checkout=complete`) after payment, and that page then polls `GET /api/subscription`
-   for a few seconds waiting for the webhook below to land, since completion itself doesn't update
-   our database.
+   Setting these is enough to switch the Pricing / Handpicked Bets buttons from the mocked
+   checkout to the real Whop flow (`app/api/whop/checkout-session/route.ts` checks these are set —
+   no code changes needed). After a successful payment, Whop redirects the buyer back to
+   `/pricing?checkout=complete`, which polls `GET /api/subscription` for a few seconds waiting for
+   the webhook below to land, since the redirect itself doesn't update our database.
 3. To make the webhook actually persist the subscription, also set:
    ```
    WHOP_WEBHOOK_SECRET=ws_...
@@ -130,9 +135,9 @@ with the Elements flow Whop's own dashboard now generates for "Embed checkout" o
    signing secret into `WHOP_WEBHOOK_SECRET`.
 4. `app/api/whop/webhook/route.ts` verifies the signature (`unwrapWebhook` from `@whop/sdk/helpers`,
    using the Standard Webhooks scheme), and on `membership.activated` reads `metadata.userId`
-   (attached client-side when the checkout element minted its session) to set `subscribed: true` +
-   store `whopMembershipId` on that user; `membership.deactivated` flips it back off by looking the
-   user up via `whopMembershipId` as a fallback when metadata isn't present.
+   (attached when the checkout configuration was created) to set `subscribed: true` + store
+   `whopMembershipId` on that user; `membership.deactivated` flips it back off by looking the user
+   up via `whopMembershipId` as a fallback when metadata isn't present.
 
 ### 3. Google sign-in (optional)
 
@@ -275,7 +280,8 @@ app/
   api/analysis-history/route.ts     DB-backed recent-analyses list
   api/subscription/route.ts         DB-backed paywall state
   api/account/route.ts              display name + account-data reset
-  api/config/route.ts               exposes aiEnabled/whopEnabled/whopPlanId flags to the client
+  api/config/route.ts               exposes aiEnabled/whopEnabled flags to the client
+  api/whop/checkout-session/route.ts  creates a Whop checkout configuration, returns its purchase_url
   api/whop/webhook/route.ts         real Whop webhook, persists subscription to the DB (WHOP_*-gated)
 components/
   AppChrome.tsx                     picks marketing topnav vs. app sidebar vs. bare (checkout/login/signup) per route
@@ -283,12 +289,10 @@ components/
   Nav.tsx, Sidebar.tsx, ModeBadge.tsx   marketing topnav, in-app icon sidebar, live/demo indicator
   UrgencyBanner.tsx, SocialProofToast.tsx, ExitIntentModal.tsx, ProfitCalculator.tsx, FaqAccordion.tsx
   AnalysisResultView.tsx            renders a structured analysis + "paper trade this pick"
-  checkout/WhopCheckoutModal.tsx    modal chrome around the Whop Elements checkout (falls back to /checkout/mock when unconfigured)
-  checkout/WhopCheckoutEmbed.tsx    the actual `<Checkout>`/`<CheckoutElement>` tree, client-only (dynamic ssr:false)
 lib/
   prompts.ts                        the two system prompts, verbatim
   types.ts                          shared TypeScript types
-  anthropic.ts                      API client getter
+  anthropic.ts / whop.ts             API client getters
   auth.ts                           NextAuth config (credentials provider, JWT sessions)
   session.ts                        requireUserId() helper for route handlers
   prisma.ts                         Prisma client singleton
@@ -321,7 +325,8 @@ middleware.ts                       redirects unauthenticated visitors to /login
 | `DIRECT_URL`             | **yes**  | —                    | Same database, Neon's **direct** (non-pooled) string; used by migrations |
 | `ANTHROPIC_API_KEY`      | no       | unset (mocked)       | Real AI Analyzer + Handpicked Bets curation |
 | `ANALYSIS_MODEL`         | no       | `claude-sonnet-5`    | —                                  |
-| `WHOP_PLAN_ID`           | no       | unset (mocked)  | Real Whop embedded checkout        |
+| `WHOP_API_KEY`           | no       | unset (mocked)  | Real Whop checkout                 |
+| `WHOP_PLAN_ID`           | no       | unset (mocked)  | Real Whop checkout                 |
 | `WHOP_WEBHOOK_SECRET`    | no       | unset (webhook disabled) | Webhook signature verification |
 | `CRON_SECRET`            | no       | unset (cron disabled)    | Weekly Handpicked Bets curation run |
 | `GOOGLE_CLIENT_ID`       | no       | unset (Google sign-in disabled) | From Google Cloud Console — see section 3 above |

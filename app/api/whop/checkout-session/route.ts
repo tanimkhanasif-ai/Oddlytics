@@ -1,0 +1,43 @@
+import { NextResponse } from "next/server";
+import { getWhopClient } from "@/lib/whop";
+import { requireUserId } from "@/lib/session";
+
+export const runtime = "nodejs";
+
+// Creates a Whop checkout configuration for the signed-in user and hands back
+// Whop's own purchase_url — a complete, ready-to-use checkout link Whop
+// generates itself, the same kind its dashboard's "Checkout Links" feature
+// produces. The browser is sent there directly (full-page redirect) rather
+// than embedding it, after both embed SDKs 404'd on this account for reasons
+// only Whop's side could explain. metadata.userId is read back by the
+// webhook to know which Oddlytics user just subscribed.
+export async function POST(req: Request) {
+  const userId = await requireUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const planId = process.env.WHOP_PLAN_ID;
+  if (!process.env.WHOP_API_KEY || !planId) {
+    return NextResponse.json(
+      { error: "Whop checkout isn't configured yet. Set WHOP_API_KEY and WHOP_PLAN_ID to enable it." },
+      { status: 501 }
+    );
+  }
+
+  const origin = req.headers.get("origin") ?? process.env.NEXTAUTH_URL ?? "";
+
+  try {
+    const whop = getWhopClient();
+    const config = await whop.checkoutConfigurations.create({
+      plan_id: planId,
+      metadata: { userId },
+      redirect_url: `${origin}/pricing?checkout=complete`,
+    });
+    if (!config.purchase_url) {
+      return NextResponse.json({ error: "Whop didn't return a checkout URL." }, { status: 502 });
+    }
+    return NextResponse.json({ url: config.purchase_url });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to create checkout configuration.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+}
