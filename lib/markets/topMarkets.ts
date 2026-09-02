@@ -12,6 +12,8 @@ export interface TrendingMarket {
   volumeUsd: number;
   date: string | null;
   url?: string;
+  /** The market's own thumbnail image, when the source platform has one. */
+  image?: string;
 }
 
 const GAMMA_BASE = "https://gamma-api.polymarket.com";
@@ -34,6 +36,8 @@ interface GammaEvent {
   volume24hr?: string | number;
   endDate?: string;
   markets?: GammaEventMarket[];
+  icon?: string;
+  image?: string;
 }
 
 function parseOutcomes(m: GammaEventMarket): TrendingMarketOutcome[] {
@@ -81,6 +85,7 @@ export async function fetchTrendingPolymarketMarkets(limit: number): Promise<Tre
         volumeUsd,
         date: e.endDate ?? null,
         url: `https://polymarket.com/event/${e.slug}`,
+        image: e.icon || e.image || undefined,
       };
     })
     .filter((m): m is TrendingMarket => m !== null);

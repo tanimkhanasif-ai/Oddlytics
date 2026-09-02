@@ -21,6 +21,7 @@ export async function GET() {
     platform: p.platform,
     question: p.question,
     url: p.url,
+    imageUrl: p.imageUrl,
     side: p.side,
     confidence: p.confidence,
     marketPct: p.marketPct,

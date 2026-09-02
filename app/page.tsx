@@ -23,7 +23,7 @@ export default async function HomePage() {
   if (session?.user) redirect("/dashboard");
 
   return (
-    <div className="aurora min-h-screen overflow-x-clip font-sans">
+    <div className="aurora min-h-screen overflow-x-clip font-sans [zoom:0.9]">
       <OfferBar />
       <Nav />
       <main>

@@ -133,6 +133,10 @@ model HandpickedPick {
   marketId   String
   question   String
   url        String?
+  /// The market's own thumbnail image, when the source platform has one
+  /// (Polymarket events do; Kalshi generally doesn't). Null falls back to
+  /// the plain rank badge in the UI.
+  imageUrl   String?
   /// The side the AI backs, and how sure it is.
   side       String
   confidence Float

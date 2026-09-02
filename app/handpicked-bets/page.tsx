@@ -13,6 +13,7 @@ interface Pick {
   platform: string;
   question: string;
   url: string | null;
+  imageUrl: string | null;
   side: "YES" | "NO";
   confidence: number;
   marketPct: number;
@@ -138,7 +139,22 @@ function PickCard({
   return (
     <div className="glass-card flex flex-col rounded-2xl p-5">
       <div className="flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded bg-brand/20 text-[10px] font-bold text-brand">
+        {pick.imageUrl && (
+          // Plain <img>, not next/image — the source domain is whatever
+          // Polymarket/Kalshi happens to host it on, so there's no fixed
+          // remotePatterns list to configure. onError just drops the image;
+          // the rank badge still identifies the pick either way.
+          <img
+            src={pick.imageUrl}
+            alt=""
+            className="h-7 w-7 shrink-0 rounded-md object-cover"
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        )}
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-brand/20 text-[10px] font-bold text-brand">
           {pick.rank}
         </span>
         <PlatformBadge platform={pick.platform} size="xs" />

@@ -101,6 +101,7 @@ export async function curateWeeklyPicks(): Promise<{ weekOf: Date; count: number
         marketId: w.market.id,
         question: w.market.question,
         url: w.market.url ?? null,
+        imageUrl: w.market.image ?? null,
         side: w.side,
         confidence: w.confidence,
         marketPct: w.marketPct,
@@ -120,6 +121,7 @@ export interface ManualPickInput {
   marketId: string;
   question: string;
   url?: string | null;
+  imageUrl?: string | null;
   volumeUsd?: number;
   /** Market-implied probability (0-100) for the side the analysis recommends, so edge is comparable with the automated pipeline's picks. */
   marketPct: number;
@@ -174,6 +176,7 @@ export async function publishManualPicks(
         marketId: w.marketId,
         question: w.question,
         url: w.url ?? null,
+        imageUrl: w.imageUrl ?? null,
         side: w.side,
         confidence: w.confidence,
         marketPct: w.marketPct,
