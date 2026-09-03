@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Wallet, ChevronDown } from "lucide-react";
 import FeatureGate from "@/components/FeatureGate";
 import PlatformBadge from "@/components/PlatformBadge";
+import TraderAvatar from "@/components/app/TraderAvatar";
 import { useCopyTrading } from "@/lib/hooks/useCopyTrading";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
@@ -16,14 +17,6 @@ const LEADERBOARD_SIZE = 25;
  *  honest proxy for "what this trader is doing right now." */
 const LIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-const TINTS = [
-  "bg-up/25 text-up",
-  "bg-info/25 text-info",
-  "bg-violet/25 text-violet",
-  "bg-amber/25 text-amber",
-  "bg-cyan/25 text-cyan",
-];
-
 /** Users naturally paste a full Polymarket profile URL (e.g.
  *  polymarket.com/profile/0xabc...) instead of a bare wallet address —
  *  pull the address out of whatever they pasted rather than requiring
@@ -32,17 +25,9 @@ function extractWalletAddress(raw: string): string | null {
   const match = raw.trim().match(/0x[a-fA-F0-9]{40}/);
   return match ? match[0] : null;
 }
-
 function truncateAddress(address: string): string {
   if (address.length <= 12) return address;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
-
-function initialsFor(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "??";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
 export default function CopyTradingPage() {
@@ -350,13 +335,7 @@ function TraderRow({
   return (
     <div>
       <div className="flex items-center gap-4 py-3.5 transition-colors duration-200 hover:bg-foreground/[0.03]">
-        <span
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
-            TINTS[index % TINTS.length]
-          }`}
-        >
-          {initialsFor(name)}
-        </span>
+        <TraderAvatar seed={trader.walletAddress} className="h-11 w-11 shrink-0 rounded-lg object-cover" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-foreground">
             #{trader.rank} {name}
