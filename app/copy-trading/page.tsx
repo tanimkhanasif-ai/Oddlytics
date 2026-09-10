@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Wallet, ChevronDown } from "lucide-react";
 import FeatureGate from "@/components/FeatureGate";
 import PlatformBadge from "@/components/PlatformBadge";
-import TraderAvatar from "@/components/app/TraderAvatar";
 import { useCopyTrading } from "@/lib/hooks/useCopyTrading";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
@@ -28,6 +27,43 @@ function extractWalletAddress(raw: string): string | null {
 function truncateAddress(address: string): string {
   if (address.length <= 12) return address;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
+/** Deterministic color-circle initials avatar, keyed by wallet address/name
+ *  so the same trader always gets the same look. */
+const TINTS = [
+  "border-brand/40 bg-brand/15 text-brand",
+  "border-cyan/40 bg-cyan/15 text-cyan",
+  "border-violet/40 bg-violet/15 text-violet",
+  "border-amber/40 bg-amber/15 text-amber",
+  "border-up/40 bg-up/15 text-up",
+];
+function hashSeed(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+function initialsFor(seed: string, name: string | null): string {
+  if (name && name.trim()) return name.trim().slice(0, 2).toUpperCase();
+  return seed.slice(2, 4).toUpperCase();
+}
+function TraderAvatar({
+  seed,
+  name,
+  className,
+}: {
+  seed: string;
+  name?: string | null;
+  className?: string;
+}) {
+  const tint = TINTS[hashSeed(seed) % TINTS.length];
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-lg border text-sm font-bold ${tint} ${className ?? ""}`}
+    >
+      {initialsFor(seed, name ?? null)}
+    </span>
+  );
 }
 
 export default function CopyTradingPage() {
@@ -335,7 +371,7 @@ function TraderRow({
   return (
     <div>
       <div className="flex items-center gap-4 py-3.5 transition-colors duration-200 hover:bg-foreground/[0.03]">
-        <TraderAvatar seed={trader.walletAddress} className="h-11 w-11 shrink-0 rounded-lg object-cover" />
+        <TraderAvatar seed={trader.walletAddress} name={trader.name} className="h-11 w-11" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-foreground">
             #{trader.rank} {name}

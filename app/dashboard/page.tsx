@@ -112,13 +112,13 @@ export default function DashboardPage() {
       <div className="glass-panel flex flex-wrap items-center justify-between gap-6 rounded-3xl p-6">
         <div className="flex items-center gap-4">
           <div className="flex -space-x-3">
-            {["A", "M", "J"].map((i) => (
-              <span
-                key={i}
-                className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-background bg-brand/20 text-sm font-bold text-brand"
-              >
-                {i}
-              </span>
+            {["/avatars/avatar-1.avif", "/avatars/avatar-4.avif", "/avatars/avatar-2.avif"].map((src) => (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                className="h-11 w-11 rounded-full border-2 border-background object-cover"
+              />
             ))}
           </div>
           <p className="text-lg font-medium">

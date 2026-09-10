@@ -183,9 +183,11 @@ export default function PricingPage() {
 
       <div className="glass-panel flex flex-wrap items-center justify-between gap-4 rounded-3xl p-5">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-brand/40 bg-brand/[0.12]">
-            <TrendingUp className="h-5 w-5 text-brand" />
-          </span>
+          <img
+            src="/avatars/avatar-6.webp"
+            alt=""
+            className="h-11 w-11 rounded-xl border border-brand/40 object-cover"
+          />
           <div className="text-sm">
             <p className="font-semibold text-foreground">Sarah K. from Los Angeles, CA</p>
             <p className="text-muted-foreground">
