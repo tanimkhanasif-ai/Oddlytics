@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     description:
       "Screenshot. Predict. Win. AI-powered picks, confidence scores and automation for Polymarket, Kalshi and more.",
     type: "website",
+    siteName: "Oddlytics",
   },
   twitter: { card: "summary_large_image" },
 };

@@ -17,12 +17,22 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://oddlytics.site"),
   title: "Oddlytics",
   description: "Understand prediction-market questions on Polymarket and Kalshi.",
+  openGraph: { siteName: "Oddlytics" },
 };
+
+// Tells Google the human-readable name for this domain — without it, search
+// results show the raw "oddlytics.site" instead of "Oddlytics" as the site name.
+const WEBSITE_JSON_LD = `{"@context":"https://schema.org","@type":"WebSite","name":"Oddlytics","url":"https://oddlytics.site"}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={archivo.variable}>
       <body className="min-h-screen font-sans text-foreground">
+        <Script
+          id="website-json-ld"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: WEBSITE_JSON_LD }}
+        />
         <Script
           id="whop-pixel"
           strategy="afterInteractive"
