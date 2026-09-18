@@ -6,11 +6,11 @@ import { Faqs, Features, Hero, Pricing, ProfitCalculator, Steps } from "@/compon
 import { Footer, Nav, OfferBar, WinToast } from "@/components/landing/chrome";
 
 export const metadata: Metadata = {
-  title: "Oddlytics — The #1 AI Predictor for Prediction Markets",
+  title: "Oddlytics — The AI Predictor for Prediction Markets",
   description:
-    "Oddlytics is the all-in-one AI platform for prediction markets. Scan any market, get daily AI picks, confidence scores and automation for Polymarket and Kalshi.",
+    "Oddlytics is your all in one AI tool for prediction markets and it analyzes and gives you the perfect bet for prediction markets.",
   openGraph: {
-    title: "Oddlytics — The #1 AI Predictor for Prediction Markets",
+    title: "Oddlytics — The AI Predictor for Prediction Markets",
     description:
       "Screenshot. Predict. Win. AI-powered picks, confidence scores and automation for Polymarket, Kalshi and more.",
     type: "website",

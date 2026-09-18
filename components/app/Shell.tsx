@@ -16,6 +16,7 @@ import {
   Zap,
   X,
   Flame,
+  Newspaper,
   type LucideIcon,
 } from "lucide-react";
 import { AppSidebar } from "./Sidebar";
@@ -34,6 +35,7 @@ const TITLES: Record<string, { title: string; icon: LucideIcon }> = {
   "/copy-trading": { title: "Copy Trading", icon: Users },
   "/settings": { title: "Settings", icon: Settings },
   "/pricing": { title: "Go Premium", icon: Crown },
+  "/blog": { title: "Blog", icon: Newspaper },
   "/help": { title: "Help & Support", icon: LifeBuoy },
 };
 

@@ -159,6 +159,17 @@ export function Footer() {
     <footer className="border-t border-border/60 px-6 py-10">
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 text-center md:flex-row md:justify-between md:text-left">
         <Logo />
+        <nav className="flex gap-4 text-xs text-muted-foreground">
+          <Link href="/blog" className="hover:text-foreground">
+            Blog
+          </Link>
+          <Link href="/pricing" className="hover:text-foreground">
+            Pricing
+          </Link>
+          <Link href="/help" className="hover:text-foreground">
+            Help
+          </Link>
+        </nav>
         <p className="max-w-xl text-xs text-muted-foreground">
           Oddlytics provides research and analysis only. It never touches your money or wallet.
           Prediction markets carry risk. © {new Date().getFullYear()} Oddlytics.
