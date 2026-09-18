@@ -15,7 +15,7 @@ const archivo = Archivo({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://oddlytics.site"),
-  title: "Oddlytics",
+  title: { default: "Oddlytics", template: "%s | Oddlytics" },
   description: "Understand prediction-market questions on Polymarket and Kalshi.",
   openGraph: { siteName: "Oddlytics" },
 };

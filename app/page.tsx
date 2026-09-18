@@ -6,7 +6,7 @@ import { Faqs, Features, Hero, Pricing, ProfitCalculator, Steps } from "@/compon
 import { Footer, Nav, OfferBar, WinToast } from "@/components/landing/chrome";
 
 export const metadata: Metadata = {
-  title: "Oddlytics — The AI Predictor for Prediction Markets",
+  title: { absolute: "Oddlytics — The AI Predictor for Prediction Markets" },
   description:
     "Oddlytics is your all in one AI tool for prediction markets and it analyzes and gives you the perfect bet for prediction markets.",
   openGraph: {

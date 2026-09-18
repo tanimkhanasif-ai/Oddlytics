@@ -11,7 +11,7 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   const post = getBlogPost(params.slug);
   if (!post) return {};
   return {
-    title: `${post.title} — Oddlytics Blog`,
+    title: post.title,
     description: post.description,
     openGraph: { title: post.title, description: post.description, type: "article" },
   };

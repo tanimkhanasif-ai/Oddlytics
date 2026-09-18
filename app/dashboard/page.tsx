@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { TrendingUp, MonitorPlay, BookmarkCheck, Wallet, Users, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { MoneyCounter } from "@/components/app/MoneyCounter";
 import { ProofBadge } from "@/components/app/ProofBadge";
+
+export const metadata: Metadata = { title: "Dashboard" };
 
 interface BigCard {
   to: string;

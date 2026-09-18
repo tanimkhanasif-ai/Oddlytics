@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 
 export const metadata: Metadata = {
-  title: "Blog — Oddlytics",
+  title: "Blog",
   description:
     "Guides and notes on prediction markets, how Oddlytics' AI analysis works, and how to read Polymarket and Kalshi prices.",
 };
