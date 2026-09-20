@@ -158,7 +158,9 @@ function Analyzer() {
         </div>
 
         <div
-          className="mt-6 cursor-pointer rounded-xl border border-dashed border-brand/35 bg-brand/[0.03] px-6 py-12 text-center transition-colors duration-200 hover:border-brand/60"
+          className={`mt-6 cursor-pointer rounded-xl border border-dashed border-brand/35 bg-brand/[0.03] text-center transition-colors duration-200 hover:border-brand/60 ${
+            imagePreview ? "p-3" : "px-6 py-12"
+          }`}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
@@ -171,7 +173,7 @@ function Analyzer() {
             <img
               src={imagePreview}
               alt="Screenshot preview"
-              className="mx-auto max-h-56 rounded-lg object-contain"
+              className="max-h-[70vh] w-full rounded-lg object-contain"
             />
           ) : (
             <>
