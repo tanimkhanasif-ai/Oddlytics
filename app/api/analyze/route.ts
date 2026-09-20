@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
-        error: `You've reached your limit of ${ANALYSIS_LIMIT} analyses for this 12-hour period.`,
+        error: `You've reached your limit of ${ANALYSIS_LIMIT} analyses for this 24-hour period.`,
         limitExceeded: true,
         resetAt: rateLimit.resetAt,
       },

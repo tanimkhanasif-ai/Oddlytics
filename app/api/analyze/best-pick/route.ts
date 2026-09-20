@@ -16,12 +16,12 @@ export async function POST(req: NextRequest) {
   if (!access.ok) return access.response;
 
   // This burns several real API calls (one per candidate market) for a single
-  // recorded result, so it's gated by the same 12h limit up front, not after.
+  // recorded result, so it's gated by the same 24h limit up front, not after.
   const rateLimit = await checkAnalysisRateLimit(access.userId);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
-        error: `You've reached your limit of ${ANALYSIS_LIMIT} analyses for this 12-hour period.`,
+        error: `You've reached your limit of ${ANALYSIS_LIMIT} analyses for this 24-hour period.`,
         limitExceeded: true,
         resetAt: rateLimit.resetAt,
       },

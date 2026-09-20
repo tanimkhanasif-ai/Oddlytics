@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ANALYSIS_LIMIT } from "@/lib/analysisLimit";
 
-const WINDOW_MS = 12 * 60 * 60 * 1000;
+const WINDOW_MS = 24 * 60 * 60 * 1000;
 export { ANALYSIS_LIMIT };
 
 export interface RateLimitResult {
@@ -11,7 +11,7 @@ export interface RateLimitResult {
 }
 
 /**
- * Caps a user to ANALYSIS_LIMIT analyses per rolling 12h window, counted from
+ * Caps a user to ANALYSIS_LIMIT analyses per rolling 24h window, counted from
  * AnalysisRecord (already written on every real analyze) rather than a
  * separate counter table. "Find me the perfect bet" burns several real API
  * calls per single recorded result, so it's gated by this same check before
