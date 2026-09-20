@@ -102,54 +102,44 @@ function Analyzer() {
     }
   }
 
-  async function handleFileChange(file: File | null) {
+  function handleFileChange(file: File | null) {
     if (!file) return;
     setResult(null);
     setAnalyzeError(null);
     setLimitResetAt(null);
     const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      setImagePreview(dataUrl);
-      const [header, base64] = dataUrl.split(",");
-      const mediaType = header.match(/data:(.*);base64/)?.[1] || "image/png";
-      setAnalyzing(true);
-      try {
-        const res = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "screenshot", imageBase64: base64, imageMediaType: mediaType, capitalUsd }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          if (data.limitExceeded) {
-            setLimitResetAt(data.resetAt);
-            return;
-          }
-          throw new Error(data.error || "Analysis failed.");
-        }
-        setResult(data);
-        record(data);
-      } catch (err) {
-        setAnalyzeError(err instanceof Error ? err.message : "Analysis failed.");
-      } finally {
-        setAnalyzing(false);
-      }
-    };
+    reader.onload = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   }
 
+  /**
+   * "Find me the perfect bet": analyzes whichever screenshot is currently
+   * staged, if any — otherwise falls back to scanning live trending markets
+   * on its own. Uploading a screenshot no longer auto-analyzes; this button
+   * is the single trigger for both paths.
+   */
   async function handleFindBestBet() {
     setAnalyzeError(null);
     setLimitResetAt(null);
     setResult(null);
     setFindingBest(true);
     try {
-      const res = await fetch("/api/analyze/best-pick", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ capitalUsd }),
-      });
+      let res: Response;
+      if (imagePreview) {
+        const [header, base64] = imagePreview.split(",");
+        const mediaType = header.match(/data:(.*);base64/)?.[1] || "image/png";
+        res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "screenshot", imageBase64: base64, imageMediaType: mediaType, capitalUsd }),
+        });
+      } else {
+        res = await fetch("/api/analyze/best-pick", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ capitalUsd }),
+        });
+      }
       const data = await res.json();
       if (!res.ok) {
         if (data.limitExceeded) {
@@ -206,9 +196,9 @@ function Analyzer() {
             size="md"
             className="mx-auto mt-7"
             onClick={() => fileInputRef.current?.click()}
-            disabled={!!limitResetAt}
+            disabled={!!limitResetAt || findingBest}
           >
-            {analyzing ? "Analyzing…" : "Click here to add a market"} <Arrow />
+            {imagePreview ? "Change screenshot" : "Click here to add a market"} <Arrow />
           </GlowButton>
           <input
             ref={fileInputRef}
@@ -295,7 +285,11 @@ function Analyzer() {
           disabled={!!limitResetAt}
         >
           <Wand2 className="h-4 w-4" />
-          {findingBest ? "Scanning live markets…" : "Find me the perfect bet"}
+          {findingBest
+            ? imagePreview
+              ? "Analyzing screenshot…"
+              : "Scanning live markets…"
+            : "Find me the perfect bet"}
         </GlowButton>
 
         {analyzeError && <p className="mt-3 text-sm text-down">{analyzeError}</p>}
