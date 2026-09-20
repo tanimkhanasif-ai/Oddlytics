@@ -157,6 +157,11 @@ export async function POST(req: NextRequest) {
       // can't burn the whole budget before the model ever writes the JSON
       // answer — a 1500 cap was truncating those responses to no text at all.
       max_tokens: 4096,
+      // Medium is plenty for filling in a fixed JSON template — this is a
+      // scoped extraction task, not open-ended reasoning, so the default
+      // "high" effort was spending real money on thinking depth this task
+      // doesn't need.
+      output_config: { effort: "medium" },
       system: ANALYSIS_ENGINE_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
     });
