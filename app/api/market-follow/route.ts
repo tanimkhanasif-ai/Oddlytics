@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId, requireSubscriber } from "@/lib/session";
 import { fetchKalshiQuote } from "@/lib/markets/kalshi";
 import { analyzeLiveMarket } from "@/lib/analyzeMarket";
+import { checkAnalysisRateLimit } from "@/lib/rateLimit";
 import { MIN_CONFIDENCE } from "@/lib/handpicks";
 
 export const runtime = "nodejs";
@@ -73,6 +74,12 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
+      // Each re-analysis is a real Anthropic call, so it draws from the same
+      // shared 8-per-24h pool as every other analyze path — otherwise a user
+      // following many markets could run up unbounded spend on autopilot.
+      const rateLimit = await checkAnalysisRateLimit(userId);
+      if (!rateLimit.allowed) break;
+
       try {
         const quote = await fetchKalshiQuote(f.marketId);
         const analysis = await analyzeLiveMarket({
@@ -81,6 +88,10 @@ export async function POST(req: NextRequest) {
           yesPrice: quote.yesPrice,
           noPrice: quote.noPrice,
           marketId: f.marketId,
+        });
+
+        await prisma.analysisRecord.create({
+          data: { userId, data: analysis as unknown as object },
         });
 
         if (analysis.confidence_pct >= MIN_CONFIDENCE) {
