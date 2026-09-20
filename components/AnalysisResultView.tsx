@@ -108,6 +108,44 @@ export default function AnalysisResultView({
         </ul>
       </Section>
 
+      {result.other_outcomes && result.other_outcomes.length > 0 && (
+        <Section title="Other outcomes considered">
+          <div className="space-y-2">
+            {result.other_outcomes.map((outcome, i) => (
+              <details
+                key={i}
+                className="group rounded-lg border border-border bg-background/40 p-3 text-sm"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between font-medium text-foreground/90">
+                  <span>{outcome.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {outcome.confidence_pct}% confidence
+                  </span>
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Key risks</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-foreground/80">
+                      {outcome.key_risks.map((r, j) => (
+                        <li key={j}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Exit if</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-foreground/80">
+                      {outcome.exit_if.map((r, j) => (
+                        <li key={j}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        </Section>
+      )}
+
       {canPaperTrade && (
         <div className="mt-5 border-t border-border pt-5">
           <PaperTradeAction result={result} onOpened={onOpened} />

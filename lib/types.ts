@@ -6,6 +6,14 @@ export interface PositionSizing {
   rationale: string;
 }
 
+/** A non-chosen outcome from a multi-outcome market, kept short — just why it lost out. */
+export interface OtherOutcome {
+  label: string;
+  confidence_pct: number;
+  key_risks: string[];
+  exit_if: string[];
+}
+
 export interface AnalysisResult {
   market_question: string;
   platform: Platform;
@@ -19,6 +27,12 @@ export interface AnalysisResult {
    * YES/NO markets.
    */
   recommended_outcome_label?: string | null;
+  /**
+   * The other outcomes from a multi-outcome market, each with a short
+   * why-not summary. Empty/absent for plain binary YES/NO markets, or when
+   * `recommended_outcome_label` is null.
+   */
+  other_outcomes?: OtherOutcome[];
   reasons: string[];
   key_risks: string[];
   position_sizing: PositionSizing;

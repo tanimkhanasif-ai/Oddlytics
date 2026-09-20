@@ -1,4 +1,4 @@
-import type { AnalysisResult, Platform } from "@/lib/types";
+import type { AnalysisResult, OtherOutcome, Platform } from "@/lib/types";
 import { truncate } from "@/lib/utils";
 
 export interface MockAnalysisInput {
@@ -107,12 +107,24 @@ export function generateMockAnalysis(input: MockAnalysisInput): MockAnalysisOutp
 
   const question = multiDemo ? multiDemo.question : input.question || "Uploaded market screenshot";
 
+  const otherOutcomes: OtherOutcome[] = multiDemo
+    ? multiDemo.outcomes
+        .filter((label) => label !== recommendedOutcomeLabel)
+        .map((label) => ({
+          label,
+          confidence_pct: Math.round(15 + rand() * 40),
+          key_risks: ["This mock confidence is randomly generated, not real research into this outcome."],
+          exit_if: ["New information specific to this outcome would need to change the picture entirely."],
+        }))
+    : [];
+
   const result: AnalysisResult = {
     market_question: question,
     platform: multiDemo?.demoPlatform ?? input.platform,
     recommendation,
     confidence_pct: confidencePct,
     recommended_outcome_label: recommendedOutcomeLabel,
+    other_outcomes: otherOutcomes,
     reasons: [
       "This is a mocked analysis — the real Anthropic API isn't connected yet, so nothing below reflects actual research.",
       ...(multiDemo
