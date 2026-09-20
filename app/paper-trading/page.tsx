@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Wallet, Plus, ChevronDown, Star, Link2, ImagePlus } from "lucide-react";
+import AnalysisCountdown from "@/components/AnalysisCountdown";
 import FeatureGate from "@/components/FeatureGate";
 import PlatformBadge from "@/components/PlatformBadge";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import { Sparkline } from "@/components/app/Sparkline";
 import { GlowButton } from "@/components/landing/primitives";
+import { useAnalysisHistory } from "@/lib/hooks/useAnalysisHistory";
 import { usePaperTrading } from "@/lib/hooks/usePaperTrading";
 import { simulateCurrentPrice } from "@/lib/mocks/priceSimulator";
 import type { TrendingMarket } from "@/lib/markets/topMarkets";
@@ -44,6 +46,7 @@ type TradeMode = "link" | "screenshot";
 
 function PaperTrading() {
   const { cashUsd, positions, hydrated, closePosition, refresh } = usePaperTrading();
+  const { record } = useAnalysisHistory();
 
   const [markets, setMarkets] = useState<TrendingMarket[]>([]);
   const [marketsCollapsed, setMarketsCollapsed] = useState(false);
@@ -143,10 +146,11 @@ function PaperTrading() {
               prefill={prefill}
               onConsumePrefill={() => setPrefill(null)}
               onOpened={() => { refresh(); setTradeOpen(false); }}
+              record={record}
             />
           )}
           {tradeMode === "screenshot" && (
-            <ScreenshotAnalyzeForm onOpened={() => { refresh(); setTradeOpen(false); }} />
+            <ScreenshotAnalyzeForm onOpened={() => { refresh(); setTradeOpen(false); }} record={record} />
           )}
         </div>
       )}
@@ -374,16 +378,19 @@ function LinkAnalyzeForm({
   prefill,
   onConsumePrefill,
   onOpened,
+  record,
 }: {
   prefill: TrendingMarket | null;
   onConsumePrefill: () => void;
   onOpened: () => void;
+  record: (result: AnalysisResult) => void;
 }) {
   const [platform, setPlatform] = useState<"polymarket" | "kalshi">("polymarket");
   const [input, setInput] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [limitResetAt, setLimitResetAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!prefill) return;
@@ -399,6 +406,7 @@ function LinkAnalyzeForm({
     const useInput = (overrideInput ?? input).trim();
     if (!useInput) return;
     setError(null);
+    setLimitResetAt(null);
     setAnalyzing(true);
     try {
       const resolveRes = await fetch("/api/markets/resolve", {
@@ -422,8 +430,15 @@ function LinkAnalyzeForm({
         }),
       });
       const data = await analyzeRes.json();
-      if (!analyzeRes.ok) throw new Error(data.error || "Analysis failed.");
+      if (!analyzeRes.ok) {
+        if (data.limitExceeded) {
+          setLimitResetAt(data.resetAt);
+          return;
+        }
+        throw new Error(data.error || "Analysis failed.");
+      }
       setResult(data);
+      record(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -443,6 +458,10 @@ function LinkAnalyzeForm({
         </button>
       </div>
     );
+  }
+
+  if (limitResetAt) {
+    return <AnalysisCountdown resetAt={limitResetAt} onExpire={() => setLimitResetAt(null)} />;
   }
 
   const field =
@@ -479,16 +498,24 @@ function LinkAnalyzeForm({
   );
 }
 
-function ScreenshotAnalyzeForm({ onOpened }: { onOpened: () => void }) {
+function ScreenshotAnalyzeForm({
+  onOpened,
+  record,
+}: {
+  onOpened: () => void;
+  record: (result: AnalysisResult) => void;
+}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [limitResetAt, setLimitResetAt] = useState<string | null>(null);
 
   function handleFile(file: File | null) {
     if (!file) return;
     setError(null);
+    setLimitResetAt(null);
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
@@ -503,8 +530,15 @@ function ScreenshotAnalyzeForm({ onOpened }: { onOpened: () => void }) {
           body: JSON.stringify({ mode: "screenshot", imageBase64: base64, imageMediaType: mediaType }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Analysis failed.");
+        if (!res.ok) {
+          if (data.limitExceeded) {
+            setLimitResetAt(data.resetAt);
+            return;
+          }
+          throw new Error(data.error || "Analysis failed.");
+        }
         setResult(data);
+        record(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Analysis failed.");
       } finally {
@@ -529,6 +563,10 @@ function ScreenshotAnalyzeForm({ onOpened }: { onOpened: () => void }) {
         </button>
       </div>
     );
+  }
+
+  if (limitResetAt) {
+    return <AnalysisCountdown resetAt={limitResetAt} onExpire={() => setLimitResetAt(null)} />;
   }
 
   return (
