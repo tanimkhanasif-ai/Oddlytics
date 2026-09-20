@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { requireSubscriber } from "@/lib/session";
 import { fetchTrendingMarkets } from "@/lib/markets/topMarkets";
 import { analyzeLiveMarket } from "@/lib/analyzeMarket";
@@ -62,6 +63,13 @@ export async function POST(req: NextRequest) {
   if (analyses.length === 0) {
     return NextResponse.json({ error: "Couldn't analyze any live markets right now." }, { status: 502 });
   }
+
+  // Every one of these was a real Anthropic call, not just the one returned —
+  // all of them need to consume a slot from the shared pool, or this route
+  // could burn several real calls per single gate check.
+  await prisma.analysisRecord.createMany({
+    data: analyses.map((a) => ({ userId: access.userId, data: a as unknown as object })),
+  });
 
   const best = analyses.reduce((a, b) => (b.confidence_pct > a.confidence_pct ? b : a));
   return NextResponse.json(best);
