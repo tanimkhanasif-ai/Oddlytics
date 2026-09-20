@@ -73,9 +73,8 @@ export async function analyzeLiveMarket({
     // See app/api/analyze/route.ts — 1500 was truncating adaptive-thinking
     // responses on complex markets before any text got written.
     max_tokens: 4096,
-    // See app/api/analyze/route.ts — medium effort is enough for this
-    // scoped JSON-template task and costs meaningfully less than default.
-    output_config: { effort: "medium" },
+    // See app/api/analyze/route.ts — output_config.effort errors on Haiku
+    // 4.5, so it's deliberately omitted while ANALYSIS_MODEL points there.
     system: ANALYSIS_ENGINE_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userContent }],
   });

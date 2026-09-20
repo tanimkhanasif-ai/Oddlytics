@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { ANALYSIS_LIMIT } from "@/lib/analysisLimit";
 
 const WINDOW_MS = 12 * 60 * 60 * 1000;
-export const ANALYSIS_LIMIT = 10;
+export { ANALYSIS_LIMIT };
 
 export interface RateLimitResult {
   allowed: boolean;

@@ -13,4 +13,4 @@ export function getAnthropicClient(): Anthropic {
   return client;
 }
 
-export const ANALYSIS_MODEL = process.env.ANALYSIS_MODEL || "claude-sonnet-5";
+export const ANALYSIS_MODEL = process.env.ANALYSIS_MODEL || "claude-haiku-4-5";

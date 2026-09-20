@@ -6,6 +6,7 @@ import AnalysisResultView from "@/components/AnalysisResultView";
 import FeatureGate from "@/components/FeatureGate";
 import { Arrow, GlowButton } from "@/components/landing/primitives";
 import { useAnalysisHistory } from "@/lib/hooks/useAnalysisHistory";
+import { ANALYSIS_LIMIT } from "@/lib/analysisLimit";
 import type { AnalysisResult, MarketQuote } from "@/lib/types";
 
 type Platform = "polymarket" | "kalshi";
@@ -319,7 +320,7 @@ function Countdown({ resetAt, onExpire }: { resetAt: string; onExpire: () => voi
     <div className="mt-3 rounded-xl border border-brand/30 bg-brand/[0.05] p-4 text-center">
       <p className="text-sm font-semibold text-foreground">Analysis limit reached</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        You&apos;ve used all 10 analyses for this 12-hour period. Next slot opens in:
+        You&apos;ve used all {ANALYSIS_LIMIT} analyses for this 12-hour period. Next slot opens in:
       </p>
       <p className="mt-2 text-2xl font-bold tabular-nums text-brand">
         {pad(h)}:{pad(m)}:{pad(s)}

@@ -157,11 +157,10 @@ export async function POST(req: NextRequest) {
       // can't burn the whole budget before the model ever writes the JSON
       // answer — a 1500 cap was truncating those responses to no text at all.
       max_tokens: 4096,
-      // Medium is plenty for filling in a fixed JSON template — this is a
-      // scoped extraction task, not open-ended reasoning, so the default
-      // "high" effort was spending real money on thinking depth this task
-      // doesn't need.
-      output_config: { effort: "medium" },
+      // Note: output_config.effort is a Sonnet/Opus-tier parameter — it
+      // errors on Haiku 4.5, so it's deliberately omitted here. Re-add it
+      // (effort: "medium") only if ANALYSIS_MODEL is switched back to a
+      // model that supports it.
       system: ANALYSIS_ENGINE_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
     });
