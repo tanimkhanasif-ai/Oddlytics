@@ -161,14 +161,14 @@ export default function AnalysisResultView({
 function PaperTradeAction({ result, onOpened }: { result: AnalysisResult; onOpened?: () => void }) {
   const { openPosition, cashUsd, hydrated } = usePaperTrading();
   const [open, setOpen] = useState(false);
+  const [side, setSide] = useState<"YES" | "NO">(result.recommendation);
   const [size, setSize] = useState(
     String(result.position_sizing.suggested_amount ?? 25)
   );
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const entryPrice =
-    result.recommendation === "YES" ? result._yesPrice! : result._noPrice!;
+  const entryPrice = side === "YES" ? result._yesPrice! : result._noPrice!;
 
   async function confirm() {
     const sizeUsd = Number(size);
@@ -178,7 +178,7 @@ function PaperTradeAction({ result, onOpened }: { result: AnalysisResult; onOpen
       marketQuestion: result.market_question,
       platform: result.platform,
       marketId: result._marketId,
-      side: result.recommendation,
+      side,
       entryPrice,
       sizeUsd,
       source: "analyzer",
@@ -206,6 +206,14 @@ function PaperTradeAction({ result, onOpened }: { result: AnalysisResult; onOpen
 
   return (
     <div className="flex flex-wrap items-center gap-3">
+      <div className="flex gap-2">
+        <SideButton active={side === "YES"} tone="yes" onClick={() => setSide("YES")}>
+          Yes @ {((result._yesPrice ?? 0) * 100).toFixed(0)}¢
+        </SideButton>
+        <SideButton active={side === "NO"} tone="no" onClick={() => setSide("NO")}>
+          No @ {((result._noPrice ?? 0) * 100).toFixed(0)}¢
+        </SideButton>
+      </div>
       <label className="text-sm text-muted-foreground">
         Size (virtual USD)
         <input
@@ -216,7 +224,7 @@ function PaperTradeAction({ result, onOpened }: { result: AnalysisResult; onOpen
         />
       </label>
       <GlowButton size="sm" onClick={confirm} disabled={!hydrated}>
-        Confirm {result.recommendation} @ {(entryPrice * 100).toFixed(0)}¢
+        Confirm {side} @ {(entryPrice * 100).toFixed(0)}¢
       </GlowButton>
       <button
         onClick={() => setOpen(false)}
@@ -229,6 +237,33 @@ function PaperTradeAction({ result, onOpened }: { result: AnalysisResult; onOpen
       </span>
       {error && <p className="w-full text-xs text-no">{error}</p>}
     </div>
+  );
+}
+
+function SideButton({
+  active,
+  tone,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  tone: "yes" | "no";
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+        active
+          ? tone === "yes"
+            ? "bg-yes text-[color:var(--on-brand)]"
+            : "bg-no text-white"
+          : "border border-brand/30 text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
