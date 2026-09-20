@@ -112,34 +112,21 @@ function Analyzer() {
     reader.readAsDataURL(file);
   }
 
-  /**
-   * "Find me the perfect bet": analyzes whichever screenshot is currently
-   * staged, if any — otherwise falls back to scanning live trending markets
-   * on its own. Uploading a screenshot no longer auto-analyzes; this button
-   * is the single trigger for both paths.
-   */
+  /** "Find me the perfect bet": analyzes whichever screenshot is currently staged. */
   async function handleFindBestBet() {
+    if (!imagePreview) return;
     setAnalyzeError(null);
     setLimitResetAt(null);
     setResult(null);
     setFindingBest(true);
     try {
-      let res: Response;
-      if (imagePreview) {
-        const [header, base64] = imagePreview.split(",");
-        const mediaType = header.match(/data:(.*);base64/)?.[1] || "image/png";
-        res = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "screenshot", imageBase64: base64, imageMediaType: mediaType, capitalUsd }),
-        });
-      } else {
-        res = await fetch("/api/analyze/best-pick", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ capitalUsd }),
-        });
-      }
+      const [header, base64] = imagePreview.split(",");
+      const mediaType = header.match(/data:(.*);base64/)?.[1] || "image/png";
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "screenshot", imageBase64: base64, imageMediaType: mediaType, capitalUsd }),
+      });
       const data = await res.json();
       if (!res.ok) {
         if (data.limitExceeded) {
@@ -282,14 +269,10 @@ function Analyzer() {
         <GlowButton
           onClick={handleFindBestBet}
           className="mt-3 w-full py-3.5 text-base"
-          disabled={!!limitResetAt}
+          disabled={!!limitResetAt || !imagePreview}
         >
           <Wand2 className="h-4 w-4" />
-          {findingBest
-            ? imagePreview
-              ? "Analyzing screenshot…"
-              : "Scanning live markets…"
-            : "Find me the perfect bet"}
+          {findingBest ? "Analyzing screenshot…" : "Find me the perfect bet"}
         </GlowButton>
 
         {analyzeError && <p className="mt-3 text-sm text-down">{analyzeError}</p>}
