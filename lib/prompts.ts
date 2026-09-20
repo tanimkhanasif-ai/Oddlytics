@@ -56,16 +56,24 @@ MULTI-OUTCOME MARKETS:
   Change" / "25 bps increase" / "25 bps decrease" / "50+ bps increase" /
   "50+ bps decrease", each with its own price) rather than a plain
   binary YES/NO question.
-- If so, read and weigh EVERY outcome shown, not just whichever one
-  happened to be selected/highlighted in the screenshot. Compare each
-  outcome's price against your own estimate of its true probability and
-  pick the single outcome with the best edge (the largest gap between
+- This also covers date-ladder / threshold-ladder events: the same
+  underlying question asked repeatedly with different deadlines (e.g.
+  "By March 2026?" / "By June 2026?" / "By December 2026?", each its own
+  row with its own YES/NO price) rather than one shared set of named
+  outcome buckets. Treat every date/threshold row exactly like a named
+  outcome — do not analyze only the one row that happened to be
+  selected or in view.
+- Read and weigh EVERY outcome or date row shown, not just whichever
+  one happened to be selected/highlighted in the screenshot. Compare
+  each one's price against your own estimate of its true probability
+  and pick the single one with the best edge (the largest gap between
   price and your fair-value estimate, in your favor).
-- Set "recommended_outcome_label" to that outcome's name, copied exactly
-  as it's labeled in the image (e.g. "No Change"). Set "recommendation"
-  to YES if you'd buy that outcome's Yes side, or NO if the better trade
-  is betting against it. Base every other field (reasons, risks, take
-  profit, stop loss, exit_if) on that specific chosen outcome.
+- Set "recommended_outcome_label" to that outcome's (or date row's) name,
+  copied exactly as it's labeled in the image (e.g. "No Change", or
+  "By June 2026" for a date-ladder market). Set "recommendation" to YES
+  if you'd buy that outcome's Yes side, or NO if the better trade is
+  betting against it. Base every other field (reasons, risks, take
+  profit, stop loss, exit_if) on that specific chosen outcome/date.
 - For every OTHER outcome shown that you did not pick, add one entry to
   "other_outcomes" — your own confidence in that outcome specifically
   (not the winner's), a one-sentence "why" explaining why it lost out to
