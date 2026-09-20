@@ -160,6 +160,11 @@ function Analyzer() {
         <div
           className="mt-6 cursor-pointer rounded-xl border border-dashed border-brand/35 bg-brand/[0.03] px-6 py-12 text-center transition-colors duration-200 hover:border-brand/60"
           onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            handleFileChange(e.dataTransfer.files?.[0] || null);
+          }}
         >
           {imagePreview ? (
             // eslint-disable-next-line @next/next/no-img-element
