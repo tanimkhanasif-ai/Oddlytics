@@ -123,6 +123,7 @@ export default function AnalysisResultView({
                   </span>
                 </summary>
                 <div className="mt-3 space-y-3">
+                  <p className="text-foreground/80">{outcome.why}</p>
                   <div>
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Key risks</p>
                     <ul className="mt-1 list-disc space-y-1 pl-5 text-foreground/80">

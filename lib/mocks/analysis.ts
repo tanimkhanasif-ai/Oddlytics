@@ -113,6 +113,7 @@ export function generateMockAnalysis(input: MockAnalysisInput): MockAnalysisOutp
         .map((label) => ({
           label,
           confidence_pct: Math.round(15 + rand() * 40),
+          why: `"${label}" priced in a narrower gap against its own fair-value estimate than "${recommendedOutcomeLabel}", so it didn't win out on edge.`,
           key_risks: ["This mock confidence is randomly generated, not real research into this outcome."],
           exit_if: ["New information specific to this outcome would need to change the picture entirely."],
         }))

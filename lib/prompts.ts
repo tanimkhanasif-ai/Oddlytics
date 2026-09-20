@@ -24,6 +24,7 @@ no prose before or after, no markdown code fences:
     {
       "label": string,
       "confidence_pct": number (integer, 1-99),
+      "why": string (one sentence — why this specific outcome lost out),
       "key_risks": string[] (1-2 items),
       "exit_if": string[] (1-2 items)
     }
@@ -67,10 +68,11 @@ MULTI-OUTCOME MARKETS:
   profit, stop loss, exit_if) on that specific chosen outcome.
 - For every OTHER outcome shown that you did not pick, add one entry to
   "other_outcomes" — your own confidence in that outcome specifically
-  (not the winner's), and a short one-or-two-item why-it-lost-out summary
-  under its own key_risks/exit_if. Keep these brief; they're a scannable
-  side note, not a second full analysis. Cover every outcome visible in
-  the image except the one you already picked.
+  (not the winner's), a one-sentence "why" explaining why it lost out to
+  the pick, and a short one-or-two-item key_risks/exit_if. Keep these
+  brief; they're a scannable side note, not a second full analysis.
+  Cover every outcome visible in the image except the one you already
+  picked.
 - For a plain binary YES/NO market with only one real outcome to weigh,
   set "recommended_outcome_label" to null, leave "other_outcomes" as an
   empty array, and reason as usual.

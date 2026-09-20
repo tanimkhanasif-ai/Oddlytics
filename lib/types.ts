@@ -10,6 +10,8 @@ export interface PositionSizing {
 export interface OtherOutcome {
   label: string;
   confidence_pct: number;
+  /** One sentence: why this outcome specifically didn't win out over the pick. */
+  why: string;
   key_risks: string[];
   exit_if: string[];
 }
