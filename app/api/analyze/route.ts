@@ -153,7 +153,10 @@ export async function POST(req: NextRequest) {
     const client = getAnthropicClient();
     const response = await client.messages.create({
       model: ANALYSIS_MODEL,
-      max_tokens: 1500,
+      // High enough that adaptive thinking on a complex multi-outcome market
+      // can't burn the whole budget before the model ever writes the JSON
+      // answer — a 1500 cap was truncating those responses to no text at all.
+      max_tokens: 4096,
       system: ANALYSIS_ENGINE_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
     });

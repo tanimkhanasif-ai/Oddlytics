@@ -70,7 +70,9 @@ export async function analyzeLiveMarket({
   const client = getAnthropicClient();
   const response = await client.messages.create({
     model: ANALYSIS_MODEL,
-    max_tokens: 1500,
+    // See app/api/analyze/route.ts — 1500 was truncating adaptive-thinking
+    // responses on complex markets before any text got written.
+    max_tokens: 4096,
     system: ANALYSIS_ENGINE_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userContent }],
   });
